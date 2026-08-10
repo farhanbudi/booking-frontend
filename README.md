@@ -1,8 +1,8 @@
 # Booking Frontend
 
-Antarmuka web untuk sistem pemesanan ruangan, dibangun menggunakan React + Vite + Tailwind CSS. Frontend ini terhubung ke [`booking-backend`](../booking-backend) (Bun + ElysiaJS).
+Antarmuka web untuk sistem pemesanan ruangan, dibangun menggunakan React + Vite + Tailwind CSS. Frontend ini terhubung ke [`booking-backend`](https://github.com/farhanbudi/booking-backend) (Bun + ElysiaJS).
 
-Untuk penjelasan teknis mengenai pencegahan double-booking, lihat [README backend](../booking-backend/README.md).
+Untuk penjelasan teknis mengenai pencegahan double-booking, lihat [README backend](https://github.com/farhanbudi/booking-backend/blob/main/README.md).
 
 ---
 
