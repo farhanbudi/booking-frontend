@@ -1,0 +1,29 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+body {
+  @apply bg-base text-ink font-body antialiased;
+}
+
+h1,
+h2,
+h3 {
+  @apply font-display;
+}
+
+.btn-primary {
+  @apply bg-primary text-white px-4 py-2 rounded-lg font-medium hover:bg-primary-dark transition-colors disabled:opacity-50 disabled:cursor-not-allowed;
+}
+
+.btn-outline {
+  @apply border border-line text-ink px-4 py-2 rounded-lg font-medium hover:bg-white transition-colors;
+}
+
+.input-field {
+  @apply w-full border border-line rounded-lg px-3 py-2 bg-white focus:outline-none focus:ring-2 focus:ring-primary-light;
+}
+
+.card {
+  @apply bg-white border border-line rounded-xl p-5;
+}
