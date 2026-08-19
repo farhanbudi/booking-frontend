@@ -90,5 +90,54 @@ src/
 | Command | Keterangan |
 |---|---|
 | `npm run dev` | Jalankan development server |
-| `npm run build` | Build untuk production |
+| `npm run build` | Build untuk production (typecheck `tsc -b` + `vite build`) |
 | `npm run preview` | Preview hasil build production |
+| `npm run test` | Jalankan unit/component test (Vitest + React Testing Library) |
+| `npm run test:e2e` | Jalankan end-to-end test (Playwright) |
+
+---
+
+## Testing
+
+### Unit & Component Test
+
+Test unit/komponen menggunakan **Vitest** + **React Testing Library** dengan environment `jsdom`, berjalan **tanpa backend**. File test diletakkan berdampingan dengan sumber kode (`src/**/*.test.ts(x)`).
+
+```bash
+npm run test
+```
+
+Cakupan test saat ini:
+
+- **API client** (`src/api/client.ts`) — injeksi token Bearer, ekstraksi pesan error dari body `{ error }`, pesan fallback
+- **Auth context** (`src/context/AuthContext.tsx`) — pemulihan user dari token, pembersihan token invalid, alur login/register/logout
+- **Komponen** — `ProtectedRoute`, `Navbar`
+- **Halaman** — `LoginPage`, `RegisterPage`, `ResourcesPage`, `BookingPage`, `MyBookingsPage`
+
+### End-to-End Test (E2E)
+
+Test E2E menggunakan **Playwright** terhadap aplikasi sungguhan yang berjalan di browser Chromium.
+
+**Prasyarat:**
+
+1. Backend [`booking-backend`](../booking-backend) berjalan di `http://localhost:3000`
+2. Development server berjalan (`npm run dev`) di `http://localhost:5173`
+3. Browser Chromium untuk Playwright sudah terpasang:
+
+```bash
+npx playwright install chromium
+```
+
+**Menjalankan test:**
+
+```bash
+npm run test:e2e
+```
+
+Cakupan journey E2E (`e2e/`):
+
+- **Auth** — redirect pengguna yang belum login ke `/login`, registrasi, login, error kredensial salah & email duplikat
+- **Booking** — booking ruangan, double-booking slot yang sama memunculkan error `409 Conflict`
+- **Booking Saya** — booking muncul di daftar dan bisa dibatalkan
+
+Spec E2E membuat user throwaway sendiri per eksekusi, sehingga tidak memerlukan akun test yang di-seed.
