@@ -120,17 +120,19 @@ Test E2E menggunakan **Playwright** terhadap aplikasi sungguhan yang berjalan di
 
 **Prasyarat:**
 
-1. Backend [`booking-backend`](../booking-backend) berjalan di `http://localhost:3000`
-2. Development server berjalan (`npm run dev`) di `http://localhost:5173`
-3. Browser Chromium untuk Playwright sudah terpasang:
+1. Backend test [`booking-backend`](../booking-backend) berjalan di `http://localhost:3001` (bukan `:3000`). Playwright menjalankan frontend dengan `vite --mode test` yang memuat `.env.test`, sehingga frontend menunjuk ke `:3001`.
+2. Browser Chromium untuk Playwright sudah terpasang:
 
 ```bash
 npx playwright install chromium
 ```
 
+> Catatan: Development server frontend (`http://localhost:5173`) dijalankan otomatis oleh Playwright saat test berjalan, jadi tidak perlu di-start manual.
+
 **Menjalankan test:**
 
 ```bash
+# Pastikan booking-backend jalan di port 3001, lalu:
 npm run test:e2e
 ```
 

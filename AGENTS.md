@@ -7,7 +7,7 @@ Booking room-reservation frontend: React 18 + Vite 5 + TypeScript + Tailwind v3 
 - `npm run dev` — dev server on port 5173 (fixed in `vite.config.ts`).
 - `npm run build` — verification step: runs `tsc -b` typecheck then `vite build`. There is **no lint script**; use `npm run build` to verify type safety and production build.
 - `npm run test` — unit/component tests (Vitest + React Testing Library, jsdom). Runs without the backend; no `npm run dev` needed.
-- `npm run test:e2e` — Playwright E2E tests (`e2e/`). **Prerequisites:** the backend (`../booking-backend` on `:3000`) AND the dev server (`npm run dev` on `:5173`) must be running. First install browsers with `npx playwright install chromium`. E2E specs register their own throwaway users, so no seeded test account is required.
+- `npm run test:e2e` — Playwright E2E tests (`e2e/`). **Prerequisites:** the **test backend** (`../booking-backend` on `:3001`) must be running, since the e2e dev server loads `.env.test` (`VITE_API_BASE_URL=http://localhost:3001`). The dev server is started automatically by Playwright (`vite --mode test`, port `:5173`). First install browsers with `npx playwright install chromium`. E2E specs register their own throwaway users, so no seeded test account is required.
 
 ## Setup / gotchas
 
