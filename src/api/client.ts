@@ -23,7 +23,17 @@ async function request<T>(
 
   if (!res.ok) {
     const message = data?.error ?? `Request gagal (status ${res.status})`;
-    throw new Error(message);
+    const err = new Error(message) as Error & {
+      status?: number;
+      retryAfter?: number;
+    };
+    err.status = res.status;
+    const retryAfter = res.headers.get("Retry-After");
+    if (retryAfter) {
+      const seconds = Number(retryAfter);
+      if (!Number.isNaN(seconds)) err.retryAfter = seconds;
+    }
+    throw err;
   }
 
   return data as T;

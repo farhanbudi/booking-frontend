@@ -22,6 +22,7 @@ export function BookingPage() {
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [rateLimitLeft, setRateLimitLeft] = useState(0);
 
   useEffect(() => {
     if (!id) return;
@@ -61,10 +62,35 @@ export function BookingPage() {
       // Pesan dari backend sudah informatif untuk kasus konflik (409),
       // termasuk saat exclusion constraint di database yang menangkap overlap.
       setError(err.message ?? "Gagal membuat booking");
+
+      // Rate limit 429: baca header Retry-After (detik) dan nonaktifkan
+      // tombol Booking sementara sambil menampilkan hitung mundur.
+      if (err.status === 429) {
+        const seconds = err.retryAfter && err.retryAfter > 0
+          ? err.retryAfter
+          : 60;
+        setRateLimitLeft(seconds);
+      }
     } finally {
       setSubmitting(false);
     }
   }
+
+  useEffect(() => {
+    if (rateLimitLeft <= 0) return;
+    const timer = setInterval(() => {
+      setRateLimitLeft((prev) => {
+        if (prev <= 1) {
+          clearInterval(timer);
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+    return () => clearInterval(timer);
+  }, [rateLimitLeft]);
+
+  const isBlocked = rateLimitLeft > 0 || submitting;
 
   function formatTime(iso: string) {
     return new Date(iso).toLocaleTimeString("id-ID", {
@@ -129,6 +155,11 @@ export function BookingPage() {
         {error && (
           <p className="text-danger text-sm bg-red-50 border border-red-200 rounded-lg px-3 py-2 mb-4">
             {error}
+            {rateLimitLeft > 0 && (
+              <span className="block mt-1 font-medium">
+                Silakan coba lagi dalam {rateLimitLeft} detik.
+              </span>
+            )}
           </p>
         )}
         {success && (
@@ -165,10 +196,14 @@ export function BookingPage() {
 
         <button
           onClick={handleBook}
-          disabled={submitting}
+          disabled={isBlocked}
           className="btn-primary mt-5"
         >
-          {submitting ? "Memproses..." : "Booking ruangan ini"}
+          {submitting
+            ? "Memproses..."
+            : rateLimitLeft > 0
+            ? `Coba lagi dalam ${rateLimitLeft}s`
+            : "Booking ruangan ini"}
         </button>
       </div>
     </div>
