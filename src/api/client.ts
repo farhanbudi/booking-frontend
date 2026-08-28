@@ -53,6 +53,12 @@ export interface Resource {
   capacity: number;
   location: string | null;
   isActive: boolean;
+  pricePerHour: number | null;
+}
+
+export interface PaymentInfo {
+  checkoutUrl?: string;
+  expiresAt?: string;
 }
 
 export interface Booking {
@@ -62,6 +68,35 @@ export interface Booking {
   startTime: string;
   endTime: string;
   status: "pending" | "confirmed" | "cancelled";
+  payment?: PaymentInfo;
+}
+
+// Free booking -> Booking directly. Paid booking -> wrapped with payment.
+export type CreateBookingResponse =
+  | Booking
+  | { booking: Booking; payment: Required<PaymentInfo> };
+
+// ---- Helpers ----
+export function isPaidResource(resource: Resource | null | undefined): boolean {
+  return (
+    !!resource &&
+    typeof resource.pricePerHour === "number" &&
+    resource.pricePerHour > 0
+  );
+}
+
+export function isPaidCreate(
+  resp: CreateBookingResponse
+): resp is { booking: Booking; payment: Required<PaymentInfo> } {
+  return (resp as { payment?: unknown }).payment != null;
+}
+
+export function formatIDR(amount: number): string {
+  return `Rp ${new Intl.NumberFormat("id-ID").format(amount)}`;
+}
+
+export function redirectToCheckout(url: string): void {
+  window.location.href = url;
 }
 
 // ---- Auth ----
@@ -100,12 +135,17 @@ export const bookingApi = {
     ),
 
   create: (input: { resourceId: string; startTime: string; endTime: string }) =>
-    request<Booking>("/bookings", {
+    request<CreateBookingResponse>("/bookings", {
       method: "POST",
       body: JSON.stringify(input),
     }),
 
   listMine: () => request<Booking[]>("/bookings"),
+
+  getCheckoutUrl: (id: string) =>
+    request<{ booking: Booking; payment: Required<PaymentInfo> }>(
+      `/bookings/${id}/checkout-url`
+    ),
 
   cancel: (id: string) =>
     request<Booking>(`/bookings/${id}/cancel`, { method: "PATCH" }),

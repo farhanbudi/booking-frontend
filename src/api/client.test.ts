@@ -1,14 +1,21 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { authApi, resourceApi, type User } from "./client";
+import {
+  authApi,
+  bookingApi,
+  isPaidCreate,
+  resourceApi,
+  type User,
+} from "./client";
 
-function okResponse(data: unknown) {
-  return { ok: true, status: 200, json: async () => data };
+function okResponse(data: unknown, status = 200) {
+  return { ok: true, status, headers: { get: () => null }, json: async () => data };
 }
 
 function failResponse(status: number, body: unknown) {
   return {
     ok: false,
     status,
+    headers: { get: () => null },
     json: async () => {
       if (body instanceof Error) throw body;
       return body;
@@ -94,5 +101,125 @@ describe("api client - auth token lifecycle", () => {
     authApi.logout();
 
     expect(localStorage.getItem("token")).toBeNull();
+  });
+});
+
+describe("api client - paid booking create", () => {
+  beforeEach(() => {
+    localStorage.clear();
+    localStorage.setItem("token", "tok");
+  });
+  afterEach(() => vi.unstubAllGlobals());
+
+  it("create berbayar mengembalikan bentuk wrapped dengan payment", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue(
+        okResponse(
+          {
+            booking: {
+              id: "b1",
+              userId: "u1",
+              resourceId: "r1",
+              startTime: "2026-08-19T09:00:00.000Z",
+              endTime: "2026-08-19T10:00:00.000Z",
+              status: "pending",
+            },
+            payment: {
+              checkoutUrl: "https://checkout.stripe.com/x",
+              expiresAt: "2026-08-19T10:00:00.000Z",
+            },
+          },
+          201
+        )
+      )
+    );
+
+    const resp = await bookingApi.create({
+      resourceId: "r1",
+      startTime: "2026-08-19T09:00:00.000Z",
+      endTime: "2026-08-19T10:00:00.000Z",
+    });
+
+    expect(isPaidCreate(resp)).toBe(true);
+    if (isPaidCreate(resp)) {
+      expect(resp.payment.checkoutUrl).toBe("https://checkout.stripe.com/x");
+    }
+  });
+
+  it("create 409 menampilkan pesan overlap bahasa Indonesia", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue(
+        failResponse(409, { error: "Slot sudah dipesan" })
+      )
+    );
+
+    await expect(
+      bookingApi.create({
+        resourceId: "r1",
+        startTime: "2026-08-19T09:00:00.000Z",
+        endTime: "2026-08-19T10:00:00.000Z",
+      })
+    ).rejects.toThrow("Slot sudah dipesan");
+  });
+});
+
+describe("api client - checkout url", () => {
+  beforeEach(() => {
+    localStorage.clear();
+    localStorage.setItem("token", "tok");
+  });
+  afterEach(() => vi.unstubAllGlobals());
+
+  it("getCheckoutUrl mengembalikan checkoutUrl", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue(
+        okResponse({
+          booking: {
+            id: "b1",
+            userId: "u1",
+            resourceId: "r1",
+            startTime: "2026-08-19T09:00:00.000Z",
+            endTime: "2026-08-19T10:00:00.000Z",
+            status: "pending",
+          },
+          payment: {
+            checkoutUrl: "https://checkout.stripe.com/y",
+            expiresAt: "2026-08-19T10:00:00.000Z",
+          },
+        })
+      )
+    );
+
+    const resp = await bookingApi.getCheckoutUrl("b1");
+    expect(resp.payment.checkoutUrl).toBe("https://checkout.stripe.com/y");
+  });
+
+  it("getCheckoutUrl 403 menampilkan pesan error", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue(
+        failResponse(403, { error: "Bukan pemilik booking" })
+      )
+    );
+
+    await expect(bookingApi.getCheckoutUrl("b1")).rejects.toThrow(
+      "Bukan pemilik booking"
+    );
+  });
+
+  it("getCheckoutUrl 409 (bukan pending) menampilkan pesan error", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue(
+        failResponse(409, { error: "Booking bukan pending" })
+      )
+    );
+
+    await expect(bookingApi.getCheckoutUrl("b1")).rejects.toThrow(
+      "Booking bukan pending"
+    );
   });
 });

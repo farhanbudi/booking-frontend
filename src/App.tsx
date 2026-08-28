@@ -7,6 +7,8 @@ import { RegisterPage } from "./pages/RegisterPage";
 import { ResourcesPage } from "./pages/ResourcesPage";
 import { BookingPage } from "./pages/BookingPage";
 import { MyBookingsPage } from "./pages/MyBookingsPage";
+import { PaymentSuccessPage } from "./pages/PaymentSuccessPage";
+import { PaymentCancelPage } from "./pages/PaymentCancelPage";
 
 export default function App() {
   return (
@@ -39,10 +41,27 @@ export default function App() {
               element={
                 <ProtectedRoute>
                   <MyBookingsPage />
-                </ProtectedRoute>
-              }
-            />
-          </Routes>
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/payments/success"
+            element={
+              <ProtectedRoute>
+                <PaymentSuccessPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/payments/cancel"
+            element={
+              <ProtectedRoute>
+                <PaymentCancelPage />
+              </ProtectedRoute>
+            }
+          />
+        </Routes>
         </main>
       </AuthProvider>
     </BrowserRouter>

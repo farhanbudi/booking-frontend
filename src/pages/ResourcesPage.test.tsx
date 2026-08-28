@@ -6,6 +6,9 @@ import type { Resource } from "../api/client";
 
 vi.mock("../api/client", () => ({
   resourceApi: { list: vi.fn(), get: vi.fn() },
+  formatIDR: (n: number) => `Rp ${new Intl.NumberFormat("id-ID").format(n)}`,
+  isPaidResource: (r: any) =>
+    !!r && typeof r.pricePerHour === "number" && r.pricePerHour > 0,
 }));
 
 import { resourceApi } from "../api/client";
@@ -19,6 +22,7 @@ const resources: Resource[] = [
     capacity: 4,
     location: "Lantai 1",
     isActive: true,
+    pricePerHour: null,
   },
   {
     id: "r2",
@@ -26,6 +30,7 @@ const resources: Resource[] = [
     capacity: 10,
     location: null,
     isActive: true,
+    pricePerHour: 75000,
   },
 ];
 
@@ -66,6 +71,15 @@ describe("ResourcesPage", () => {
       "href",
       "/resources/r2"
     );
+  });
+
+  it("menampilkan label harga (Gratis / per jam)", async () => {
+    resourceMock.list.mockResolvedValue(resources);
+
+    renderResources();
+
+    expect(await screen.findByText("Gratis")).toBeInTheDocument();
+    expect(screen.getByText("Rp 75.000/jam")).toBeInTheDocument();
   });
 
   it("menampilkan pesan state kosong saat tidak ada ruangan", async () => {

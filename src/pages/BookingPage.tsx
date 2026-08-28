@@ -1,6 +1,13 @@
 import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { bookingApi, resourceApi, type Resource } from "../api/client";
+import {
+  bookingApi,
+  isPaidCreate,
+  redirectToCheckout,
+  resourceApi,
+  type Resource,
+} from "../api/client";
+import { PriceTag } from "../components/PriceTag";
 
 function todayISO() {
   return new Date().toISOString().slice(0, 10);
@@ -22,6 +29,7 @@ export function BookingPage() {
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [redirecting, setRedirecting] = useState(false);
   const [rateLimitLeft, setRateLimitLeft] = useState(0);
 
   useEffect(() => {
@@ -49,11 +57,18 @@ export function BookingPage() {
     const end = new Date(start.getTime() + duration * 60_000);
 
     try {
-      await bookingApi.create({
+      const resp = await bookingApi.create({
         resourceId: id,
         startTime: start.toISOString(),
         endTime: end.toISOString(),
       });
+
+      if (isPaidCreate(resp)) {
+        setRedirecting(true);
+        redirectToCheckout(resp.payment.checkoutUrl);
+        return;
+      }
+
       setSuccess("Booking berhasil dibuat!");
       // refresh slot terisi supaya langsung terlihat
       const updated = await bookingApi.availability(id, date);
@@ -61,7 +76,7 @@ export function BookingPage() {
     } catch (err: any) {
       // Pesan dari backend sudah informatif untuk kasus konflik (409),
       // termasuk saat exclusion constraint di database yang menangkap overlap.
-      setError(err.message ?? "Gagal membuat booking");
+      setError(err?.message ?? "Gagal membuat booking");
 
       // Rate limit 429: baca header Retry-After (detik) dan nonaktifkan
       // tombol Booking sementara sambil menampilkan hitung mundur.
@@ -90,7 +105,7 @@ export function BookingPage() {
     return () => clearInterval(timer);
   }, [rateLimitLeft]);
 
-  const isBlocked = rateLimitLeft > 0 || submitting;
+  const isBlocked = rateLimitLeft > 0 || submitting || redirecting;
 
   function formatTime(iso: string) {
     return new Date(iso).toLocaleTimeString("id-ID", {
@@ -111,10 +126,11 @@ export function BookingPage() {
       {resource && (
         <>
           <h1 className="text-2xl font-semibold">{resource.name}</h1>
-          <p className="text-muted text-sm mb-6">
+          <p className="text-muted text-sm mb-1">
             Kapasitas {resource.capacity} orang
             {resource.location ? ` · ${resource.location}` : ""}
           </p>
+          <PriceTag resource={resource} />
         </>
       )}
 
@@ -201,6 +217,8 @@ export function BookingPage() {
         >
           {submitting
             ? "Memproses..."
+            : redirecting
+            ? "Mengalihkan ke pembayaran..."
             : rateLimitLeft > 0
             ? `Coba lagi dalam ${rateLimitLeft}s`
             : "Booking ruangan ini"}

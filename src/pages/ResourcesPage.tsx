@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { resourceApi, type Resource } from "../api/client";
+import { PriceTag } from "../components/PriceTag";
 
 export function ResourcesPage() {
   const [resources, setResources] = useState<Resource[]>([]);
@@ -43,6 +44,7 @@ export function ResourcesPage() {
               Kapasitas {r.capacity} orang
               {r.location ? ` · ${r.location}` : ""}
             </p>
+            <PriceTag resource={r} />
             <span className="inline-block mt-4 text-sm text-primary font-medium">
               Lihat jadwal &amp; booking →
             </span>
