@@ -5,7 +5,9 @@ import { PaymentCountdown } from "../components/PaymentCountdown";
 function formatDateTime(iso: string) {
   return new Date(iso).toLocaleString("id-ID", {
     dateStyle: "medium",
-    timeStyle: "short",
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
   });
 }
 
