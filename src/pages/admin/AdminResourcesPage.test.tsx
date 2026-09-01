@@ -11,6 +11,7 @@ vi.mock("../../api/client", () => ({
     update: vi.fn(),
     remove: vi.fn(),
   },
+  formatIDR: (n: number) => `Rp ${new Intl.NumberFormat("id-ID").format(n)}`,
 }));
 
 import { resourceApi } from "../../api/client";

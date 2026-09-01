@@ -1,4 +1,7 @@
 import { useEffect, useState } from "react";
+import DatePicker, { registerLocale } from "react-datepicker";
+import { id as idLocale } from "date-fns/locale";
+import { addYears } from "date-fns";
 import { useNavigate, useParams } from "react-router-dom";
 import {
   bookingApi,
@@ -9,8 +12,25 @@ import {
 } from "../api/client";
 import { PriceTag } from "../components/PriceTag";
 
-function todayISO() {
-  return new Date().toISOString().slice(0, 10);
+registerLocale("id", idLocale);
+
+function startOfToday(): Date {
+  const d = new Date();
+  d.setHours(0, 0, 0, 0);
+  return d;
+}
+
+function dateToISO(d: Date): string {
+  const y = d.getFullYear();
+  const m = (d.getMonth() + 1).toString().padStart(2, "0");
+  const day = d.getDate().toString().padStart(2, "0");
+  return `${y}-${m}-${day}`;
+}
+
+function defaultTime(): Date {
+  const t = new Date();
+  t.setHours(9, 0, 0, 0);
+  return t;
 }
 
 export function BookingPage() {
@@ -18,11 +38,11 @@ export function BookingPage() {
   const navigate = useNavigate();
 
   const [resource, setResource] = useState<Resource | null>(null);
-  const [date, setDate] = useState(todayISO());
+  const [date, setDate] = useState<Date>(startOfToday());
   const [bookedSlots, setBookedSlots] = useState<
     { startTime: string; endTime: string }[]
   >([]);
-  const [startTime, setStartTime] = useState("09:00");
+  const [startTime, setStartTime] = useState<Date>(defaultTime());
   const [duration, setDuration] = useState(60); // menit
 
   const [loadingSlots, setLoadingSlots] = useState(true);
@@ -41,7 +61,7 @@ export function BookingPage() {
     if (!id) return;
     setLoadingSlots(true);
     bookingApi
-      .availability(id, date)
+      .availability(id, dateToISO(date))
       .then(setBookedSlots)
       .catch((err) => setError(err.message))
       .finally(() => setLoadingSlots(false));
@@ -53,7 +73,15 @@ export function BookingPage() {
     setSuccess(null);
     setSubmitting(true);
 
-    const start = new Date(`${date}T${startTime}:00`);
+    const start = new Date(
+      date.getFullYear(),
+      date.getMonth(),
+      date.getDate(),
+      startTime.getHours(),
+      startTime.getMinutes(),
+      0,
+      0
+    );
     const end = new Date(start.getTime() + duration * 60_000);
 
     try {
@@ -71,7 +99,7 @@ export function BookingPage() {
 
       setSuccess("Booking berhasil dibuat!");
       // refresh slot terisi supaya langsung terlihat
-      const updated = await bookingApi.availability(id, date);
+      const updated = await bookingApi.availability(id, dateToISO(date));
       setBookedSlots(updated);
     } catch (err: any) {
       // Pesan dari backend sudah informatif untuk kasus konflik (409),
@@ -137,12 +165,19 @@ export function BookingPage() {
 
       <div className="card mb-6">
         <label className="block text-sm font-medium mb-1">Tanggal</label>
-        <input
-          type="date"
-          value={date}
-          min={todayISO()}
-          onChange={(e) => setDate(e.target.value)}
+        <DatePicker
+          selected={date}
+          onChange={(d: Date | null) => d && setDate(d)}
+          minDate={startOfToday()}
+          dateFormat="yyyy-MM-dd"
+          locale="id"
           className="input-field max-w-xs"
+          wrapperClassName="max-w-xs"
+          showMonthDropdown
+          showYearDropdown
+          dropdownMode="select"
+          yearDropdownItemNumber={10}
+          maxDate={addYears(startOfToday(), 1)}   // max 1 year from today
         />
 
         <h3 className="font-medium mt-5 mb-2">Slot yang sudah terisi</h3>
@@ -188,10 +223,15 @@ export function BookingPage() {
         <div className="flex flex-wrap gap-4">
           <div>
             <label className="block text-sm font-medium mb-1">Jam mulai</label>
-            <input
-              type="time"
-              value={startTime}
-              onChange={(e) => setStartTime(e.target.value)}
+            <DatePicker
+              selected={startTime}
+              onChange={(d: Date | null) => d && setStartTime(d)}
+              showTimeSelect
+              showTimeSelectOnly
+              timeIntervals={30}
+              timeFormat="HH:mm"
+              dateFormat="HH:mm"
+              locale="id"
               className="input-field"
             />
           </div>
