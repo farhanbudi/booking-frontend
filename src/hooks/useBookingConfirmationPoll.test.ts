@@ -2,7 +2,7 @@ import { render, screen } from "@testing-library/react";
 import { createElement } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { useBookingConfirmationPoll } from "./useBookingConfirmationPoll";
-import type { Booking } from "../api/client";
+import type { DetailBooking } from "../api/client";
 
 vi.mock("../api/client", () => ({
   bookingApi: { listMine: vi.fn() },
@@ -15,7 +15,7 @@ const listMock = vi.mocked(bookingApi.listMine);
 const future = new Date(Date.now() + 10 * 60 * 1000).toISOString();
 const past = new Date(Date.now() - 10 * 60 * 1000).toISOString();
 
-function base(status: Booking["status"], expiresAt?: string): Booking {
+function base(status: DetailBooking["status"], expiresAt?: string): DetailBooking {
   return {
     id: "b1",
     userId: "u1",
@@ -23,6 +23,8 @@ function base(status: Booking["status"], expiresAt?: string): Booking {
     startTime: "2026-08-19T09:00:00.000Z",
     endTime: "2026-08-19T10:00:00.000Z",
     status,
+    user: { name: "Budi" },
+    resource: { name: "Ruang A", location: "Lantai 1" },
     ...(expiresAt ? { payment: { expiresAt } } : {}),
   };
 }

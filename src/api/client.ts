@@ -71,6 +71,13 @@ export interface Booking {
   payment?: PaymentInfo;
 }
 
+// Booking untuk detail yang lebih lengkap: sudah memuat relasi
+// `user` (name) dan `resource` (name, location) untuk tampilan read-only.
+export interface DetailBooking extends Booking {
+  user: { name: string };
+  resource: { name: string; location: string | null };
+}
+
 // Free booking -> Booking directly. Paid booking -> wrapped with payment.
 export type CreateBookingResponse =
   | Booking
@@ -164,9 +171,9 @@ export const bookingApi = {
       body: JSON.stringify(input),
     }),
 
-  listMine: () => request<Booking[]>("/bookings"),
+  listMine: () => request<DetailBooking[]>("/bookings"),
 
-  listAll: () => request<Booking[]>("/bookings/admin/all"),
+  listAll: () => request<DetailBooking[]>("/bookings/admin/all"),
 
   getCheckoutUrl: (id: string) =>
     request<{ booking: Booking; payment: Required<PaymentInfo> }>(

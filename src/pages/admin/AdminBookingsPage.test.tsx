@@ -1,20 +1,7 @@
 import { render, screen } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { AdminBookingsPage } from "./AdminBookingsPage";
-import type { Booking } from "../../api/client";
-
-// jsdom/Node ICU tidak support penuh option `dateStyle/hour12` untuk locale
-// `id-ID`, jadi `toLocaleString` di AdminBookingsPage melempar `Invalid option`.
-// Kita pakai `vi.spyOn` agar override konsisten dengan test runner.
-beforeEach(() => {
-  vi.spyOn(Date.prototype, "toLocaleString").mockImplementation(function () {
-    const d = this as Date;
-    const pad = (n: number) => String(n).padStart(2, "0");
-    return `${d.getUTCFullYear()}-${pad(d.getUTCMonth() + 1)}-${pad(
-      d.getUTCDate()
-    )} ${pad(d.getUTCHours())}:${pad(d.getUTCMinutes())}`;
-  });
-});
+import type { DetailBooking } from "../../api/client";
 
 vi.mock("../../api/client", () => ({
   bookingApi: {
@@ -26,7 +13,7 @@ import { bookingApi } from "../../api/client";
 
 const bookingMock = vi.mocked(bookingApi);
 
-const bookings: Booking[] = [
+const bookings: DetailBooking[] = [
   {
     id: "b1",
     userId: "u1",
@@ -34,6 +21,8 @@ const bookings: Booking[] = [
     startTime: "2026-08-19T09:00:00.000Z",
     endTime: "2026-08-19T10:00:00.000Z",
     status: "confirmed",
+    user: { name: "Budi" },
+    resource: { name: "Ruang A", location: "Lantai 1" },
   },
   {
     id: "b2",
@@ -42,6 +31,8 @@ const bookings: Booking[] = [
     startTime: "2026-08-19T11:00:00.000Z",
     endTime: "2026-08-19T12:00:00.000Z",
     status: "pending",
+    user: { name: "Siti" },
+    resource: { name: "Ruang B", location: null },
   },
   {
     id: "b3",
@@ -50,6 +41,8 @@ const bookings: Booking[] = [
     startTime: "2026-08-18T09:00:00.000Z",
     endTime: "2026-08-18T10:00:00.000Z",
     status: "cancelled",
+    user: { name: "Andi" },
+    resource: { name: "Ruang A", location: "Lantai 1" },
   },
 ];
 

@@ -2,7 +2,7 @@ import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { MyBookingsPage } from "./MyBookingsPage";
-import type { Booking } from "../api/client";
+import type { DetailBooking } from "../api/client";
 
 vi.mock("../api/client", () => ({
   bookingApi: {
@@ -22,6 +22,20 @@ const redirectMock = vi.mocked(redirectToCheckout);
 
 const future = new Date(Date.now() + 10 * 60 * 1000).toISOString();
 const past = new Date(Date.now() - 10 * 60 * 1000).toISOString();
+
+function makeBooking(overrides: Partial<DetailBooking> = {}): DetailBooking {
+  return {
+    id: "b1",
+    userId: "u1",
+    resourceId: "r1",
+    startTime: "2026-08-19T09:00:00.000Z",
+    endTime: "2026-08-19T10:00:00.000Z",
+    status: "confirmed",
+    user: { name: "Budi" },
+    resource: { name: "Ruang A", location: "Lantai 1" },
+    ...overrides,
+  };
+}
 
 function renderMyBookings() {
   return render(<MyBookingsPage />);
@@ -45,30 +59,9 @@ describe("MyBookingsPage", () => {
 
   it("menampilkan daftar booking dengan label status", async () => {
     bookingMock.listMine.mockResolvedValue([
-      {
-        id: "b1",
-        userId: "u1",
-        resourceId: "r1",
-        startTime: "2026-08-19T09:00:00.000Z",
-        endTime: "2026-08-19T10:00:00.000Z",
-        status: "confirmed",
-      },
-      {
-        id: "b2",
-        userId: "u1",
-        resourceId: "r1",
-        startTime: "2026-08-19T11:00:00.000Z",
-        endTime: "2026-08-19T12:00:00.000Z",
-        status: "pending",
-      },
-      {
-        id: "b3",
-        userId: "u1",
-        resourceId: "r1",
-        startTime: "2026-08-18T09:00:00.000Z",
-        endTime: "2026-08-18T10:00:00.000Z",
-        status: "cancelled",
-      },
+      makeBooking({ id: "b1", status: "confirmed" }),
+      makeBooking({ id: "b2", status: "pending" }),
+      makeBooking({ id: "b3", status: "cancelled" }),
     ]);
 
     renderMyBookings();
@@ -102,41 +95,15 @@ describe("MyBookingsPage", () => {
   it("membatalkan booking, me-refresh daftar, dan menyembunyikan tombol batalkan", async () => {
     bookingMock.listMine
       .mockResolvedValueOnce([
-        {
-          id: "b1",
-          userId: "u1",
-          resourceId: "r1",
-          startTime: "2026-08-19T09:00:00.000Z",
-          endTime: "2026-08-19T10:00:00.000Z",
-          status: "confirmed",
-        },
-        {
-          id: "b2",
-          userId: "u1",
-          resourceId: "r1",
-          startTime: "2026-08-19T11:00:00.000Z",
-          endTime: "2026-08-19T12:00:00.000Z",
-          status: "pending",
-        },
+        makeBooking({ id: "b1", status: "confirmed" }),
+        makeBooking({ id: "b2", status: "pending" }),
       ])
       .mockResolvedValueOnce([
-        {
-          id: "b2",
-          userId: "u1",
-          resourceId: "r1",
-          startTime: "2026-08-19T11:00:00.000Z",
-          endTime: "2026-08-19T12:00:00.000Z",
-          status: "pending",
-        },
+        makeBooking({ id: "b2", status: "pending" }),
       ]);
-    bookingMock.cancel.mockResolvedValue({
-      id: "b1",
-      userId: "u1",
-      resourceId: "r1",
-      startTime: "2026-08-19T09:00:00.000Z",
-      endTime: "2026-08-19T10:00:00.000Z",
-      status: "cancelled",
-    });
+    bookingMock.cancel.mockResolvedValue(
+      makeBooking({ id: "b1", status: "cancelled" })
+    );
     const user = userEvent.setup();
 
     renderMyBookings();
@@ -154,15 +121,11 @@ describe("MyBookingsPage", () => {
   });
 
   it("booking pending menampilkan countdown dan tombol lanjutkan pembayaran", async () => {
-    const pending: Booking = {
+    const pending = makeBooking({
       id: "b2",
-      userId: "u1",
-      resourceId: "r1",
-      startTime: "2026-08-19T11:00:00.000Z",
-      endTime: "2026-08-19T12:00:00.000Z",
       status: "pending",
       payment: { expiresAt: future },
-    };
+    });
     bookingMock.listMine.mockResolvedValue([pending]);
     bookingMock.getCheckoutUrl.mockResolvedValue({
       booking: pending,
@@ -180,16 +143,13 @@ describe("MyBookingsPage", () => {
   });
 
   it("booking pending kedaluwarsa menampilkan pesan tanpa tombol lanjutkan", async () => {
-    const pending: Booking = {
-      id: "b2",
-      userId: "u1",
-      resourceId: "r1",
-      startTime: "2026-08-19T11:00:00.000Z",
-      endTime: "2026-08-19T12:00:00.000Z",
-      status: "pending",
-      payment: { expiresAt: past },
-    };
-    bookingMock.listMine.mockResolvedValue([pending]);
+    bookingMock.listMine.mockResolvedValue([
+      makeBooking({
+        id: "b2",
+        status: "pending",
+        payment: { expiresAt: past },
+      }),
+    ]);
 
     renderMyBookings();
 

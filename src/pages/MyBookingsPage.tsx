@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { bookingApi, redirectToCheckout, type Booking } from "../api/client";
+import { bookingApi, redirectToCheckout, type DetailBooking } from "../api/client";
 import { PaymentCountdown } from "../components/PaymentCountdown";
 
 function formatDateTime(iso: string) {
@@ -17,19 +17,19 @@ function formatDateTime(iso: string) {
   return `${date}, ${time}`;
 }
 
-const statusStyle: Record<Booking["status"], string> = {
+const statusStyle: Record<DetailBooking["status"], string> = {
   confirmed: "bg-green-50 text-green-700 border-green-200",
   pending: "bg-amber-50 text-amber-700 border-amber-200",
   cancelled: "bg-gray-100 text-muted border-line",
 };
 
-const statusLabel: Record<Booking["status"], string> = {
+const statusLabel: Record<DetailBooking["status"], string> = {
   confirmed: "Terkonfirmasi",
   pending: "Menunggu",
   cancelled: "Dibatalkan",
 };
 
-function isExpired(b: Booking): boolean {
+function isExpired(b: DetailBooking): boolean {
   return (
     !!b.payment?.expiresAt &&
     new Date(b.payment.expiresAt).getTime() <= Date.now()
@@ -37,7 +37,7 @@ function isExpired(b: Booking): boolean {
 }
 
 export function MyBookingsPage() {
-  const [bookings, setBookings] = useState<Booking[]>([]);
+  const [bookings, setBookings] = useState<DetailBooking[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [cancellingId, setCancellingId] = useState<string | null>(null);
@@ -99,6 +99,9 @@ export function MyBookingsPage() {
             <div>
               <p className="font-medium">
                 {formatDateTime(b.startTime)} – {formatDateTime(b.endTime)}
+              </p>
+              <p className="text-xs text-muted mt-1">
+                {b.resource.name} - {b.resource.location}
               </p>
               <span
                 className={`inline-block mt-2 text-xs border rounded-full px-2 py-0.5 ${statusStyle[b.status]}`}
