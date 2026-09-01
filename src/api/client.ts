@@ -122,9 +122,33 @@ export const authApi = {
 };
 
 // ---- Resources ----
+export interface CreateResourceInput {
+  name: string;
+  capacity: number;
+  location?: string;
+  pricePerHour?: number;
+}
+
+export type UpdateResourceInput = Partial<CreateResourceInput>;
+
 export const resourceApi = {
   list: () => request<Resource[]>("/resources"),
   get: (id: string) => request<Resource>(`/resources/${id}`),
+
+  create: (input: CreateResourceInput) =>
+    request<Resource>("/resources", {
+      method: "POST",
+      body: JSON.stringify(input),
+    }),
+
+  update: (id: string, input: UpdateResourceInput) =>
+    request<Resource>(`/resources/${id}`, {
+      method: "PATCH",
+      body: JSON.stringify(input),
+    }),
+
+  remove: (id: string) =>
+    request<Resource>(`/resources/${id}`, { method: "DELETE" }),
 };
 
 // ---- Bookings ----
@@ -141,6 +165,8 @@ export const bookingApi = {
     }),
 
   listMine: () => request<Booking[]>("/bookings"),
+
+  listAll: () => request<Booking[]>("/bookings/admin/all"),
 
   getCheckoutUrl: (id: string) =>
     request<{ booking: Booking; payment: Required<PaymentInfo> }>(

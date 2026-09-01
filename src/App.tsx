@@ -1,6 +1,7 @@
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "./context/AuthContext";
 import { ProtectedRoute } from "./components/ProtectedRoute";
+import { AdminRoute } from "./components/AdminRoute";
 import { Navbar } from "./components/Navbar";
 import { LoginPage } from "./pages/LoginPage";
 import { RegisterPage } from "./pages/RegisterPage";
@@ -9,6 +10,8 @@ import { BookingPage } from "./pages/BookingPage";
 import { MyBookingsPage } from "./pages/MyBookingsPage";
 import { PaymentSuccessPage } from "./pages/PaymentSuccessPage";
 import { PaymentCancelPage } from "./pages/PaymentCancelPage";
+import { AdminResourcesPage } from "./pages/admin/AdminResourcesPage";
+import { AdminBookingsPage } from "./pages/admin/AdminBookingsPage";
 
 export default function App() {
   return (
@@ -59,6 +62,23 @@ export default function App() {
               <ProtectedRoute>
                 <PaymentCancelPage />
               </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/admin/resources"
+            element={
+              <AdminRoute>
+                <AdminResourcesPage />
+              </AdminRoute>
+            }
+          />
+          <Route
+            path="/admin/bookings"
+            element={
+              <AdminRoute>
+                <AdminBookingsPage />
+              </AdminRoute>
             }
           />
         </Routes>

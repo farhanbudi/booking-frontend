@@ -25,6 +25,11 @@ export function Navbar() {
             <Link to="/my-bookings" className="text-ink hover:text-primary">
               Booking Saya
             </Link>
+            {user?.role === "admin" && (
+              <Link to="/admin/resources" className="text-ink hover:text-primary">
+                Admin
+              </Link>
+            )}
             <span className="text-muted">Hai, {user.name}</span>
             <button onClick={handleLogout} className="btn-outline !py-1.5 !px-3">
               Keluar
