@@ -3,12 +3,18 @@ import { bookingApi, redirectToCheckout, type Booking } from "../api/client";
 import { PaymentCountdown } from "../components/PaymentCountdown";
 
 function formatDateTime(iso: string) {
-  return new Date(iso).toLocaleString("id-ID", {
-    dateStyle: "medium",
+  const d = new Date(iso);
+  const date = d.toLocaleDateString("id-ID", {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+  });
+  const time = d.toLocaleTimeString("id-ID", {
     hour: "2-digit",
     minute: "2-digit",
     hour12: false,
   });
+  return `${date}, ${time}`;
 }
 
 const statusStyle: Record<Booking["status"], string> = {
