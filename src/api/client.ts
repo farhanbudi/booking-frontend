@@ -183,3 +183,11 @@ export const bookingApi = {
   cancel: (id: string) =>
     request<Booking>(`/bookings/${id}/cancel`, { method: "PATCH" }),
 };
+
+// ---- Calendar ----
+export interface CalendarEvent {
+  start: Date;
+  end: Date;
+  title?: string;
+  // tambahkan field lain sesuai calendarEvents kamu (id, resource, dll)
+}

@@ -38,8 +38,8 @@ const resource: Resource = {
 const paidResource: Resource = { ...resource, pricePerHour: 50000 };
 
 const slots = [
-  { startTime: "2026-08-19T09:00:00.000Z", endTime: "2026-08-19T10:00:00.000Z" },
-  { startTime: "2026-08-19T10:00:00.000Z", endTime: "2026-08-19T11:00:00.000Z" },
+  { startTime: "2026-09-02T09:00:00.000Z", endTime: "2026-09-02T10:00:00.000Z" },
+  { startTime: "2026-09-02T10:00:00.000Z", endTime: "2026-09-02T11:00:00.000Z" },
 ];
 
 function renderBooking(initial = "/resources/r1") {
@@ -60,7 +60,7 @@ describe("BookingPage", () => {
     redirectMock.mockReset();
   });
 
-  it("menampilkan detail resource dan daftar slot terisi", async () => {
+  it("menampilkan detail resource dan kalender slot terisi", async () => {
     resourceMock.get.mockResolvedValue(resource);
     bookingMock.availability.mockResolvedValue(slots);
 
@@ -69,31 +69,33 @@ describe("BookingPage", () => {
     expect(await screen.findByText("Ruang A")).toBeInTheDocument();
     expect(screen.getByText(/Kapasitas 4 orang/)).toBeInTheDocument();
 
-    const items = screen.getAllByRole("listitem");
-    expect(items).toHaveLength(2);
-    items.forEach((item) =>
-      expect(item.textContent).toMatch(/\d{2}[:.]\d{2}–\d{2}[:.]\d{2}/)
-    );
+    const calendar = document.querySelector(".rbc-calendar");
+    expect(calendar).toBeInTheDocument();
+    const events = document.querySelectorAll(".rbc-event");
+    expect(events).toHaveLength(2);
   });
 
-  it("menampilkan pesan semua slot kosong saat tidak ada slot terisi", async () => {
+  it("menampilkan kalender kosong saat tidak ada slot terisi", async () => {
     resourceMock.get.mockResolvedValue(resource);
     bookingMock.availability.mockResolvedValue([]);
 
     renderBooking();
 
-    expect(
-      await screen.findByText(/semua slot kosong/)
-    ).toBeInTheDocument();
+    const calendar = await screen.findByText((_, el) =>
+      el !== null && el.classList.contains("rbc-calendar") ? true : false
+    );
+    expect(calendar).toBeInTheDocument();
+    expect(document.querySelectorAll(".rbc-event")).toHaveLength(0);
   });
 
-  it("menampilkan indikator loading jadwal saat slot dimuat", () => {
+  it("merender kalender segera saat slot sedang dimuat", async () => {
     resourceMock.get.mockReturnValue(new Promise(() => {}));
     bookingMock.availability.mockReturnValue(new Promise(() => {}));
 
     renderBooking();
 
-    expect(screen.getByText("Memuat jadwal...")).toBeInTheDocument();
+    const calendar = document.querySelector(".rbc-calendar");
+    expect(calendar).toBeInTheDocument();
   });
 
   it("booking sukses menampilkan pesan sukses dan me-refresh slot", async () => {
@@ -111,7 +113,7 @@ describe("BookingPage", () => {
 
     renderBooking();
 
-    await screen.findByText(/semua slot kosong/);
+    await screen.findByText("Ruang A");
 
     await user.click(screen.getByRole("button", { name: "Booking ruangan ini" }));
 
@@ -130,7 +132,7 @@ describe("BookingPage", () => {
 
     renderBooking();
 
-    await screen.findByText(/semua slot kosong/);
+    await screen.findByText("Ruang A");
 
     await user.click(screen.getByRole("button", { name: "Booking ruangan ini" }));
 

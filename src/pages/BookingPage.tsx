@@ -1,7 +1,9 @@
 import { useEffect, useState } from "react";
 import DatePicker, { registerLocale } from "react-datepicker";
 import { id as idLocale } from "date-fns/locale";
-import { addYears } from "date-fns";
+import { format, parse, startOfWeek, getDay, startOfDay } from "date-fns";
+import { enUS } from "date-fns/locale/en-US";
+import { Calendar, dateFnsLocalizer, type View } from "react-big-calendar";
 import { useNavigate, useParams } from "react-router-dom";
 import {
   bookingApi,
@@ -11,8 +13,19 @@ import {
   type Resource,
 } from "../api/client";
 import { PriceTag } from "../components/PriceTag";
+import { CustomToolbar } from "../components/CalendarToolbar";
 
 registerLocale("id", idLocale);
+
+const locales = { "en-US": enUS };
+
+const localizer = dateFnsLocalizer({
+  format,
+  parse,
+  startOfWeek: (date: Date) => startOfWeek(date, { weekStartsOn: 1 }),
+  getDay,
+  locales,
+});
 
 function startOfToday(): Date {
   const d = new Date();
@@ -45,12 +58,18 @@ export function BookingPage() {
   const [startTime, setStartTime] = useState<Date>(defaultTime());
   const [duration, setDuration] = useState(60); // menit
 
-  const [loadingSlots, setLoadingSlots] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [redirecting, setRedirecting] = useState(false);
   const [rateLimitLeft, setRateLimitLeft] = useState(0);
+
+  // state untuk highlight, dipakai baik saat drag (sementara) maupun setelah lepas (persist)
+  const [highlightRange, setHighlightRange] = useState<{
+    start: Date;
+    end: Date;
+    valid: boolean;
+  } | null>(null);
 
   useEffect(() => {
     if (!id) return;
@@ -59,12 +78,10 @@ export function BookingPage() {
 
   useEffect(() => {
     if (!id) return;
-    setLoadingSlots(true);
     bookingApi
       .availability(id, dateToISO(date))
       .then(setBookedSlots)
-      .catch((err) => setError(err.message))
-      .finally(() => setLoadingSlots(false));
+      .catch((err) => setError(err.message));
   }, [id, date]);
 
   async function handleBook() {
@@ -135,13 +152,74 @@ export function BookingPage() {
 
   const isBlocked = rateLimitLeft > 0 || submitting || redirecting;
 
-  function formatTime(iso: string) {
-    return new Date(iso).toLocaleTimeString("id-ID", {
-      hour: "2-digit",
-      minute: "2-digit",
-      hour12: false,
-    });
+  const allowedDurations = [30, 60, 90, 120];
+
+  // dipanggil terus-menerus SELAMA drag berlangsung
+  function handleSelecting(range: { start: Date; end: Date }) {
+    const minutes = (range.end.getTime() - range.start.getTime()) / 60_000;
+    const valid = allowedDurations.includes(minutes);
+
+    setHighlightRange({ start: range.start, end: range.end, valid });
+    return true; // tetap izinkan seleksi berlanjut
   }
+
+  // dipanggil SEKALI saat mouse dilepas
+  function handleSelectSlot(slotInfo: { start: Date; end: Date }) {
+    const next = new Date(
+      date.getFullYear(),
+      date.getMonth(),
+      date.getDate(),
+      slotInfo.start.getHours(),
+      slotInfo.start.getMinutes(),
+      0,
+      0
+    );
+    setStartTime(next);
+
+    const minutes = (slotInfo.end.getTime() - slotInfo.start.getTime()) / 60_000;
+    const isValid = allowedDurations.includes(minutes);
+
+    let finalDuration: number;
+    let finalEnd: Date;
+
+    if (isValid) {
+      // durasi drag persis pas salah satu opsi (30/60/90/120)
+      finalDuration = minutes;
+      finalEnd = slotInfo.end;
+    } else {
+      // tidak valid -> potong jadi 2 jam pertama saja
+      finalDuration = 120;
+      finalEnd = new Date(next.getTime() + 120 * 60_000);
+    }
+
+    setDuration(finalDuration);
+
+    // highlight final persist (tidak di-reset ke null)
+    setHighlightRange({ start: next, end: finalEnd, valid: true });
+  }
+
+  // styling per slot berdasarkan highlightRange yang sudah persist
+  function slotPropGetter(slotDate: Date) {
+    if (!highlightRange) return {};
+
+    const isWithinRange =
+      slotDate >= highlightRange.start && slotDate < highlightRange.end;
+
+    if (!isWithinRange) return {};
+
+    return {
+      style: {
+        backgroundColor: highlightRange.valid
+          ? "rgba(46, 204, 113, 0.35)" // hijau
+          : "rgba(192, 57, 43, 0.25)", // merah
+      },
+    };
+  }
+
+  const calendarEvents = bookedSlots.map((slot) => ({
+    start: new Date(slot.startTime),
+    end: new Date(slot.endTime),
+  }));
 
   return (
     <div className="max-w-2xl mx-auto mt-10 px-1">
@@ -164,41 +242,24 @@ export function BookingPage() {
       )}
 
       <div className="card mb-6">
-        <label className="block text-sm font-medium mb-1">Tanggal</label>
-        <DatePicker
-          selected={date}
-          onChange={(d: Date | null) => d && setDate(d)}
-          minDate={startOfToday()}
-          dateFormat="yyyy-MM-dd"
-          locale="id"
-          className="input-field max-w-xs"
-          wrapperClassName="max-w-xs"
-          showMonthDropdown
-          showYearDropdown
-          dropdownMode="select"
-          yearDropdownItemNumber={10}
-          maxDate={addYears(startOfToday(), 1)}   // max 1 year from today
+        <Calendar
+          localizer={localizer}
+          events={calendarEvents}
+          startAccessor="start"
+          endAccessor="end"
+          defaultView="day"
+          views={["day"] as View[]}
+          date={date}
+          onNavigate={(newDate) => setDate(startOfDay(newDate))}
+          onSelectSlot={handleSelectSlot}
+          onSelecting={handleSelecting}
+          slotPropGetter={slotPropGetter}
+          selectable
+          eventPropGetter={() => ({ style: { backgroundColor: "#C0392B" } })}
+          culture="en-US"
+          style={{ height: 500 }}
+          components={{ toolbar: CustomToolbar }}
         />
-
-        <h3 className="font-medium mt-5 mb-2">Slot yang sudah terisi</h3>
-        {loadingSlots ? (
-          <p className="text-sm text-muted">Memuat jadwal...</p>
-        ) : bookedSlots.length === 0 ? (
-          <p className="text-sm text-muted">
-            Belum ada booking pada tanggal ini — semua slot kosong.
-          </p>
-        ) : (
-          <ul className="flex flex-wrap gap-2">
-            {bookedSlots.map((slot, i) => (
-              <li
-                key={i}
-                className="text-sm bg-red-50 text-danger border border-red-200 rounded-full px-3 py-1"
-              >
-                {formatTime(slot.startTime)}–{formatTime(slot.endTime)}
-              </li>
-            ))}
-          </ul>
-        )}
       </div>
 
       <div className="card">

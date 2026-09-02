@@ -27,3 +27,27 @@ h3 {
 .card {
   @apply bg-white border border-line rounded-xl p-5;
 }
+
+/* react-big-calendar overrides — must come AFTER the library stylesheet
+   (loaded in src/main.tsx) so project tokens win on equal specificity. */
+.rbc-toolbar button {
+  @apply border border-line text-ink font-medium text-sm rounded-md px-3 py-1.5 bg-white;
+}
+
+.rbc-toolbar button:hover {
+  @apply border-primary text-primary;
+}
+
+.rbc-toolbar button.rbc-active,
+.rbc-toolbar button:focus {
+  @apply bg-primary text-white border-primary;
+}
+
+.rbc-today {
+  background-color: #f7f3e9;
+}
+
+.rbc-event {
+  @apply text-white;
+  font-size: 0.75rem;
+}
