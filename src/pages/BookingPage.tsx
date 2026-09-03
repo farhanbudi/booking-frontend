@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import DatePicker, { registerLocale } from "react-datepicker";
 import { id as idLocale } from "date-fns/locale";
 import { format, parse, startOfWeek, getDay, startOfDay } from "date-fns";
@@ -14,6 +14,18 @@ import {
 } from "../api/client";
 import { PriceTag } from "../components/PriceTag";
 import { CustomToolbar } from "../components/CalendarToolbar";
+import {
+  allowedDurationsFor,
+  buildDayBoundary,
+  exceedsBookingHours,
+  isStartTimeInPast,
+  isWithinBookingHours,
+  LATEST_START_HOUR,
+  LATEST_START_MINUTE,
+  makeTimeOfDay,
+  MAX_HOUR,
+  MIN_HOUR,
+} from "../utils/bookingTime";
 
 registerLocale("id", idLocale);
 
@@ -92,6 +104,13 @@ export function BookingPage() {
     setSuccess(null);
     setSubmitting(true);
 
+    // Guard server-side untuk startTime yang sudah lewat (validasi UI sudah disable tombol).
+    if (isStartTimeInPast(date, startTime)) {
+      setError("Jam mulai sudah lewat dari waktu saat ini.");
+      setSubmitting(false);
+      return;
+    }
+
     const start = new Date(
       date.getFullYear(),
       date.getMonth(),
@@ -154,10 +173,24 @@ export function BookingPage() {
 
   const isBlocked = rateLimitLeft > 0 || submitting || redirecting;
 
-  const allowedDurations = [30, 60, 90, 120];
+  const ALL_DURATIONS = [30, 60, 90, 120];
+  const allowedDurations = allowedDurationsFor(startTime, ALL_DURATIONS);
+
+  // startTime lewat dari "sekarang" hanya relevan kalau bookingDay == hari ini.
+  // useMemo dengan dep [date, startTime] agar re-evaluasi hanya saat user
+  // mengubah form/calendar (tidak setiap detik), sesuai requirement "validasi saja".
+  const startTimeInPast = useMemo(
+    () => isStartTimeInPast(date, startTime),
+    [date, startTime]
+  );
 
   // dipanggil terus-menerus SELAMA drag berlangsung
   function handleSelecting(range: { start: Date; end: Date }) {
+    // tolak range yang mulai/berakhir di luar jam operasional 08:00–20:00
+    if (!isWithinBookingHours(range.start) || exceedsBookingHours(range.start, (range.end.getTime() - range.start.getTime()) / 60_000)) {
+      return false; // RBC akan menghentikan drag-select di sini
+    }
+
     // kalau overlap dengan slot yang sudah dibooking, batalkan seleksi ini
     if (isOverlappingBooked(range.start, range.end, bookedSlots)) {
       return false; // RBC akan menghentikan drag-select di sini
@@ -172,6 +205,10 @@ export function BookingPage() {
 
   // dipanggil SEKALI saat mouse dilepas
   function handleSelectSlot(slotInfo: { start: Date; end: Date }) {
+    if (!isWithinBookingHours(slotInfo.start) || exceedsBookingHours(slotInfo.start, (slotInfo.end.getTime() - slotInfo.start.getTime()) / 60_000)) {
+      return;
+    }
+
     if (isOverlappingBooked(slotInfo.start, slotInfo.end, bookedSlots)) {
       return;
     }
@@ -199,7 +236,7 @@ export function BookingPage() {
     } else {
       finalDuration = 120;
       finalEnd = new Date(next.getTime() + 120 * 60_000);
-      if (isOverlappingBooked(next, finalEnd, bookedSlots)) {
+      if (isOverlappingBooked(next, finalEnd, bookedSlots) || exceedsBookingHours(next, finalDuration)) {
         return;
       }
     }
@@ -264,10 +301,11 @@ export function BookingPage() {
   // panggil ini setiap kali startTime atau duration berubah dari form
   function syncHighlightFromForm(newStart: Date, newDuration: number) {
     const end = new Date(newStart.getTime() + newDuration * 60_000);
+    const outOfRange = !isWithinBookingHours(newStart) || exceedsBookingHours(newStart, newDuration);
     const conflict = isOverlappingBooked(newStart, end, bookedSlots);
 
-    setTimeConflictWarning(conflict);
-    setHighlightRange({ start: newStart, end, valid: !conflict });
+    setTimeConflictWarning(outOfRange || conflict);
+    setHighlightRange({ start: newStart, end, valid: !outOfRange && !conflict });
   }
 
   return (
@@ -300,6 +338,8 @@ export function BookingPage() {
           defaultView="day"
           views={["day"] as View[]}
           date={date}
+          min={buildDayBoundary(date, MIN_HOUR, 0)}
+          max={buildDayBoundary(date, MAX_HOUR, 0)}
           onNavigate={(newDate) => setDate(startOfDay(newDate))}
           onSelectSlot={handleSelectSlot}
           onSelecting={handleSelecting}
@@ -319,7 +359,7 @@ export function BookingPage() {
           }}
         />
 
-        <div className="flex flex-wrap gap-4">
+        <div className="flex flex-wrap gap-4 mt-4">
           <div>
             <label className="block text-sm font-medium mb-1">Jam mulai</label>
             <DatePicker
@@ -331,12 +371,15 @@ export function BookingPage() {
               dateFormat="HH:mm"
               locale="id"
               className="input-field"
+              minTime={makeTimeOfDay(MIN_HOUR)}
+              maxTime={makeTimeOfDay(LATEST_START_HOUR, LATEST_START_MINUTE)}
               onChange={(d: Date | null) => {
                 if (!d) return;
-                setStartTime(d);
+                const clamped = isWithinBookingHours(d) ? d : makeTimeOfDay(MAX_HOUR);
+                setStartTime(clamped);
 
                 // sync ke highlight Calendar
-                syncHighlightFromForm(d, duration);
+                syncHighlightFromForm(clamped, duration);
               }}
             />
           </div>
@@ -344,7 +387,7 @@ export function BookingPage() {
           <div>
             <label className="block text-sm font-medium mb-1">Durasi</label>
             <select
-              value={duration}
+              value={allowedDurations.includes(duration) ? duration : ""}
               className="input-field"
               onChange={(e) => {
                 const newDuration = Number(e.target.value);
@@ -355,11 +398,30 @@ export function BookingPage() {
               }}
 
             >
-              <option value={30}>30 menit</option>
-              <option value={60}>1 jam</option>
-              <option value={90}>1,5 jam</option>
-              <option value={120}>2 jam</option>
+              {!allowedDurations.includes(duration) && (
+                <option value="" disabled>
+                  Pilih durasi
+                </option>
+              )}
+              {allowedDurations.map((d) => (
+                <option key={d} value={d}>
+                  {d === 30
+                    ? "30 menit"
+                    : d === 60
+                    ? "1 jam"
+                    : d === 90
+                    ? "1,5 jam"
+                    : "2 jam"}
+                </option>
+              ))}
             </select>
+          </div>
+
+          <div className="text-sm text-muted self-end pb-2">
+            Selesai pukul{" "}
+            <span className="font-medium text-primary">
+              {format(new Date(startTime.getTime() + duration * 60_000), "HH:mm")}
+            </span>
           </div>
         </div>
 
@@ -380,13 +442,20 @@ export function BookingPage() {
         )}
         {timeConflictWarning && (
           <p className="text-sm text-danger mt-1">
-            Jam ini bentrok dengan booking lain. Silakan pilih jam lain.
+            {!isWithinBookingHours(startTime) || exceedsBookingHours(startTime, duration)
+              ? "Booking di luar jam operasional (08:00–20:00)."
+              : "Jam ini bentrok dengan booking lain. Silakan pilih jam lain."}
+          </p>
+        )}
+        {startTimeInPast && (
+          <p className="text-sm text-danger mt-1">
+            Jam mulai sudah lewat dari waktu saat ini. Silakan pilih jam yang akan datang.
           </p>
         )}
 
         <button
           onClick={handleBook}
-          disabled={isBlocked || timeConflictWarning}
+          disabled={isBlocked || timeConflictWarning || startTimeInPast}
           className="btn-primary mt-5"
         >
           {submitting

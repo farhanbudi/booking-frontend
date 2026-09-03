@@ -56,3 +56,10 @@ h3 {
 .rbc-time-view .rbc-time-header {
   display: none;
 }
+
+/* Sembunyikan opsi jam di luar jam operasional (08:00–20:00) di react-datepicker.
+   Library tidak mendukung hide via props (filterTime/minTime hanya men-disable);
+   opsi disable tetap di-render sehingga daftar terasa penuh dan tidak konsisten. */
+.react-datepicker__time-list-item--disabled {
+  display: none !important;
+}
