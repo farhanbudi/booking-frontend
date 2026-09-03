@@ -27,12 +27,12 @@ interface CustomToolbarProps extends ToolbarProps<CalendarEvent, object> {
 
 export function CustomToolbar({ date, onNavigate, onPickerOpenChange }: CustomToolbarProps) {
   return (
-    <div className="flex flex-wrap items-center justify-between gap-3 mb-3">
-      <div className="flex items-center gap-1">
+    <div className="flex items-center justify-between gap-3 mb-3 w-full">
+      <div className="flex items-center gap-1 shrink-0">
         <button
           type="button"
           onClick={() => onNavigate(Navigate.PREVIOUS)}
-          className="flex items-center gap-1 border rounded px-3 py-1.5 text-sm hover:bg-gray-100"
+          className="flex items-center gap-1 border rounded px-3 py-1.5 text-sm hover:bg-gray-100 whitespace-nowrap"
         >
           <IconChevronLeft />
           Sebelumnya
@@ -40,34 +40,37 @@ export function CustomToolbar({ date, onNavigate, onPickerOpenChange }: CustomTo
         <button
           type="button"
           onClick={() => onNavigate(Navigate.TODAY)}
-          className="border rounded px-3 py-1.5 text-sm font-medium hover:bg-gray-100"
+          className="border rounded px-3 py-1.5 text-sm font-medium hover:bg-gray-100 whitespace-nowrap"
         >
           Hari ini
         </button>
         <button
           type="button"
           onClick={() => onNavigate(Navigate.NEXT)}
-          className="flex items-center gap-1 border rounded px-3 py-1.5 text-sm hover:bg-gray-100"
+          className="flex items-center gap-1 border rounded px-3 py-1.5 text-sm hover:bg-gray-100 whitespace-nowrap"
         >
           Berikutnya
           <IconChevronRight />
         </button>
       </div>
 
-      <DatePicker
-        selected={date}
-        onChange={(newDate: Date | null) => {
-          if (newDate) onNavigate(Navigate.DATE, newDate);
-        }}
-        onCalendarOpen={() => onPickerOpenChange?.(true)}
-        onCalendarClose={() => onPickerOpenChange?.(false)}
-        minDate={new Date()}
-        dateFormat="EEEE, d MMMM yyyy"
-        locale="id"
-        className="border rounded px-3 py-1.5 text-sm w-56"
-        calendarStartDay={1}
-        popperPlacement="bottom-end"
-      />
+      <div className="shrink-0">
+        <DatePicker
+          selected={date}
+          onChange={(newDate: Date | null) => {
+            if (newDate) onNavigate(Navigate.DATE, newDate);
+          }}
+          onCalendarOpen={() => onPickerOpenChange?.(true)}
+          onCalendarClose={() => onPickerOpenChange?.(false)}
+          minDate={new Date()}
+          dateFormat="EEEE, d MMMM yyyy"
+          locale="id"
+          className="border rounded px-3 py-1.5 text-sm w-56"
+          calendarStartDay={1}
+          popperPlacement="bottom-end"
+          withPortal
+        />
+      </div>
     </div>
   );
 }

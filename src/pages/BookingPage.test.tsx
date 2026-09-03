@@ -37,9 +37,10 @@ const resource: Resource = {
 
 const paidResource: Resource = { ...resource, pricePerHour: 50000 };
 
+const todayISO = new Date().toISOString().slice(0, 10);
 const slots = [
-  { startTime: "2026-09-02T09:00:00.000Z", endTime: "2026-09-02T10:00:00.000Z" },
-  { startTime: "2026-09-02T10:00:00.000Z", endTime: "2026-09-02T11:00:00.000Z" },
+  { startTime: `${todayISO}T09:00:00.000Z`, endTime: `${todayISO}T10:00:00.000Z` },
+  { startTime: `${todayISO}T10:00:00.000Z`, endTime: `${todayISO}T11:00:00.000Z` },
 ];
 
 function renderBooking(initial = "/resources/r1") {

@@ -64,6 +64,8 @@ export function BookingPage() {
   const [redirecting, setRedirecting] = useState(false);
   const [rateLimitLeft, setRateLimitLeft] = useState(0);
 
+  const [timeConflictWarning, setTimeConflictWarning] = useState(false);
+
   // state untuk highlight, dipakai baik saat drag (sementara) maupun setelah lepas (persist)
   const [highlightRange, setHighlightRange] = useState<{
     start: Date;
@@ -156,15 +158,24 @@ export function BookingPage() {
 
   // dipanggil terus-menerus SELAMA drag berlangsung
   function handleSelecting(range: { start: Date; end: Date }) {
+    // kalau overlap dengan slot yang sudah dibooking, batalkan seleksi ini
+    if (isOverlappingBooked(range.start, range.end, bookedSlots)) {
+      return false; // RBC akan menghentikan drag-select di sini
+    }
+
     const minutes = (range.end.getTime() - range.start.getTime()) / 60_000;
     const valid = allowedDurations.includes(minutes);
 
     setHighlightRange({ start: range.start, end: range.end, valid });
-    return true; // tetap izinkan seleksi berlanjut
+    return true;
   }
 
   // dipanggil SEKALI saat mouse dilepas
   function handleSelectSlot(slotInfo: { start: Date; end: Date }) {
+    if (isOverlappingBooked(slotInfo.start, slotInfo.end, bookedSlots)) {
+      return;
+    }
+
     const next = new Date(
       date.getFullYear(),
       date.getMonth(),
@@ -183,23 +194,39 @@ export function BookingPage() {
     let finalEnd: Date;
 
     if (isValid) {
-      // durasi drag persis pas salah satu opsi (30/60/90/120)
       finalDuration = minutes;
       finalEnd = slotInfo.end;
     } else {
-      // tidak valid -> potong jadi 2 jam pertama saja
       finalDuration = 120;
       finalEnd = new Date(next.getTime() + 120 * 60_000);
+      if (isOverlappingBooked(next, finalEnd, bookedSlots)) {
+        return;
+      }
     }
 
     setDuration(finalDuration);
-
-    // highlight final persist (tidak di-reset ke null)
+    setTimeConflictWarning(false); // drag yang lolos guard di atas = sudah pasti tidak conflict
     setHighlightRange({ start: next, end: finalEnd, valid: true });
   }
 
   // styling per slot berdasarkan highlightRange yang sudah persist
   function slotPropGetter(slotDate: Date) {
+    // cek dulu apakah slot ini bagian dari booking yang sudah ada
+    const isBooked = bookedSlots.some((slot) => {
+      const slotStart = new Date(slot.startTime);
+      const slotEnd = new Date(slot.endTime);
+      return slotDate >= slotStart && slotDate < slotEnd;
+    });
+
+    if (isBooked) {
+      return {
+        style: {
+          backgroundColor: "rgba(107, 114, 128, 0.15)", // abu-abu, menandakan tidak bisa dipilih
+          cursor: "not-allowed",
+        },
+      };
+    }
+
     if (!highlightRange) return {};
 
     const isWithinRange =
@@ -210,8 +237,8 @@ export function BookingPage() {
     return {
       style: {
         backgroundColor: highlightRange.valid
-          ? "rgba(46, 204, 113, 0.35)" // hijau
-          : "rgba(192, 57, 43, 0.25)", // merah
+          ? "rgba(46, 204, 113, 0.35)"
+          : "rgba(192, 57, 43, 0.25)",
       },
     };
   }
@@ -220,6 +247,28 @@ export function BookingPage() {
     start: new Date(slot.startTime),
     end: new Date(slot.endTime),
   }));
+
+  function isOverlappingBooked(
+    start: Date,
+    end: Date,
+    booked: { startTime: string; endTime: string }[]
+  ): boolean {
+    return booked.some((slot) => {
+      const slotStart = new Date(slot.startTime);
+      const slotEnd = new Date(slot.endTime);
+      // overlap kalau range baru mulai sebelum slot berakhir DAN berakhir setelah slot mulai
+      return start < slotEnd && end > slotStart;
+    });
+  }
+
+  // panggil ini setiap kali startTime atau duration berubah dari form
+  function syncHighlightFromForm(newStart: Date, newDuration: number) {
+    const end = new Date(newStart.getTime() + newDuration * 60_000);
+    const conflict = isOverlappingBooked(newStart, end, bookedSlots);
+
+    setTimeConflictWarning(conflict);
+    setHighlightRange({ start: newStart, end, valid: !conflict });
+  }
 
   return (
     <div className="max-w-2xl mx-auto mt-10 px-1">
@@ -242,6 +291,7 @@ export function BookingPage() {
       )}
 
       <div className="card mb-6">
+        <h3 className="font-medium mb-4">Buat booking baru</h3>
         <Calendar
           localizer={localizer}
           events={calendarEvents}
@@ -256,14 +306,62 @@ export function BookingPage() {
           slotPropGetter={slotPropGetter}
           selectable
           eventPropGetter={() => ({ style: { backgroundColor: "#C0392B" } })}
-          culture="en-US"
+          culture="id"
           style={{ height: 500 }}
           components={{ toolbar: CustomToolbar }}
+          formats={{
+            timeGutterFormat: (date, culture, localizer) =>
+              localizer!.format(date, "HH:mm", culture), // label jam di kolom kiri (00:00, 01:00, dst)
+            eventTimeRangeFormat: ({ start, end }, culture, localizer) =>
+              `${localizer!.format(start, "HH:mm", culture)} – ${localizer!.format(end, "HH:mm", culture)}`, // waktu di dalam event booking
+            dayFormat: (date, culture, localizer) =>
+              localizer!.format(date, "EEEE, d MMMM yyyy", culture), // header tanggal (dari fix sebelumnya)
+          }}
         />
-      </div>
 
-      <div className="card">
-        <h3 className="font-medium mb-4">Buat booking baru</h3>
+        <div className="flex flex-wrap gap-4">
+          <div>
+            <label className="block text-sm font-medium mb-1">Jam mulai</label>
+            <DatePicker
+              selected={startTime}
+              showTimeSelect
+              showTimeSelectOnly
+              timeIntervals={30}
+              timeFormat="HH:mm"
+              dateFormat="HH:mm"
+              locale="id"
+              className="input-field"
+              onChange={(d: Date | null) => {
+                if (!d) return;
+                setStartTime(d);
+
+                // sync ke highlight Calendar
+                syncHighlightFromForm(d, duration);
+              }}
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium mb-1">Durasi</label>
+            <select
+              value={duration}
+              className="input-field"
+              onChange={(e) => {
+                const newDuration = Number(e.target.value);
+                setDuration(newDuration);
+
+                // sync ke highlight Calendar
+                syncHighlightFromForm(startTime, newDuration);
+              }}
+
+            >
+              <option value={30}>30 menit</option>
+              <option value={60}>1 jam</option>
+              <option value={90}>1,5 jam</option>
+              <option value={120}>2 jam</option>
+            </select>
+          </div>
+        </div>
 
         {error && (
           <p className="text-danger text-sm bg-red-50 border border-red-200 rounded-lg px-3 py-2 mb-4">
@@ -280,41 +378,15 @@ export function BookingPage() {
             {success}
           </p>
         )}
-
-        <div className="flex flex-wrap gap-4">
-          <div>
-            <label className="block text-sm font-medium mb-1">Jam mulai</label>
-            <DatePicker
-              selected={startTime}
-              onChange={(d: Date | null) => d && setStartTime(d)}
-              showTimeSelect
-              showTimeSelectOnly
-              timeIntervals={30}
-              timeFormat="HH:mm"
-              dateFormat="HH:mm"
-              locale="id"
-              className="input-field"
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium mb-1">Durasi</label>
-            <select
-              value={duration}
-              onChange={(e) => setDuration(Number(e.target.value))}
-              className="input-field"
-            >
-              <option value={30}>30 menit</option>
-              <option value={60}>1 jam</option>
-              <option value={90}>1,5 jam</option>
-              <option value={120}>2 jam</option>
-            </select>
-          </div>
-        </div>
+        {timeConflictWarning && (
+          <p className="text-sm text-danger mt-1">
+            Jam ini bentrok dengan booking lain. Silakan pilih jam lain.
+          </p>
+        )}
 
         <button
           onClick={handleBook}
-          disabled={isBlocked}
+          disabled={isBlocked || timeConflictWarning}
           className="btn-primary mt-5"
         >
           {submitting
