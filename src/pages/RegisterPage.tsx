@@ -25,6 +25,8 @@ export function RegisterPage() {
     }
   }
 
+  throw new Error("smoke test for boundary")
+
   return (
     <div className="max-w-sm mx-auto mt-16">
       <h1 className="text-2xl font-semibold mb-1">Buat akun</h1>

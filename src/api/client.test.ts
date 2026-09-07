@@ -6,6 +6,7 @@ import {
   resourceApi,
   type User,
 } from "./client";
+import { logger } from "../utils/logger";
 
 function okResponse(data: unknown, status = 200) {
   return { ok: true, status, headers: { get: () => null }, json: async () => data };
@@ -221,5 +222,70 @@ describe("api client - checkout url", () => {
     await expect(bookingApi.getCheckoutUrl("b1")).rejects.toThrow(
       "Booking bukan pending"
     );
+  });
+});
+
+describe("api client - logger instrumentation on non-OK responses", () => {
+  beforeEach(() => {
+    localStorage.clear();
+    vi.spyOn(logger, "warn").mockImplementation(() => {});
+    vi.spyOn(logger, "error").mockImplementation(() => {});
+  });
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    vi.mocked(logger.warn).mockRestore();
+    vi.mocked(logger.error).mockRestore();
+  });
+
+  it("calls logger.warn exactly once with path, status, message on non-OK { error } body", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue(failResponse(409, { error: "Slot sudah dipesan" }))
+    );
+
+    await expect(resourceApi.list()).rejects.toThrow("Slot sudah dipesan");
+
+    expect(logger.warn).toHaveBeenCalledTimes(1);
+    const [message, context] = vi.mocked(logger.warn).mock.calls[0];
+    expect(message).toBe("API request gagal");
+    expect(context).toEqual({
+      path: "/resources",
+      status: 409,
+      message: "Slot sudah dipesan",
+    });
+    expect(logger.error).not.toHaveBeenCalled();
+  });
+
+  it("calls logger.warn with the Indonesian fallback message when body is invalid JSON", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue(failResponse(500, new Error("invalid json")))
+    );
+
+    await expect(resourceApi.list()).rejects.toThrow(
+      "Request gagal (status 500)"
+    );
+
+    expect(logger.warn).toHaveBeenCalledTimes(1);
+    const [message, context] = vi.mocked(logger.warn).mock.calls[0];
+    expect(message).toBe("API request gagal");
+    expect(context).toEqual({
+      path: "/resources",
+      status: 500,
+      message: "Request gagal (status 500)",
+    });
+  });
+
+  it("does NOT call logger.* when response is 2xx", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue(okResponse(me))
+    );
+
+    const result = await resourceApi.list();
+
+    expect(result).toEqual(me);
+    expect(logger.warn).not.toHaveBeenCalled();
+    expect(logger.error).not.toHaveBeenCalled();
   });
 });

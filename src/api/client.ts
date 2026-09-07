@@ -1,3 +1,5 @@
+import { logger } from "../utils/logger";
+
 const BASE_URL = import.meta.env.VITE_API_BASE_URL ?? "http://localhost:3000";
 
 function getToken() {
@@ -23,6 +25,11 @@ async function request<T>(
 
   if (!res.ok) {
     const message = data?.error ?? `Request gagal (status ${res.status})`;
+    logger.warn("API request gagal", {
+      path,
+      status: res.status,
+      message,
+    });
     const err = new Error(message) as Error & {
       status?: number;
       retryAfter?: number;
