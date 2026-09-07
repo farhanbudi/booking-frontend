@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { toast } from "sonner";
 import { bookingApi, type DetailBooking } from "../../api/client";
 
 function formatDateTime(iso: string) {
@@ -31,14 +32,13 @@ const statusLabel: Record<DetailBooking["status"], string> = {
 export function AdminBookingsPage() {
   const [bookings, setBookings] = useState<DetailBooking[]>([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
 
   function load() {
     setLoading(true);
     bookingApi
       .listAll()
       .then(setBookings)
-      .catch((err) => setError(err.message))
+      .catch((err) => toast.error(err.message))
       .finally(() => setLoading(false));
   }
 
@@ -51,11 +51,6 @@ export function AdminBookingsPage() {
         Daftar booking dari seluruh user (read-only).
       </p>
 
-      {error && (
-        <p className="text-danger text-sm bg-red-50 border border-red-200 rounded-lg px-3 py-2 mb-4">
-          {error}
-        </p>
-      )}
       {loading && <p className="text-muted">Memuat...</p>}
 
       {!loading && bookings.length === 0 && (

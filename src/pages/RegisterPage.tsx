@@ -1,5 +1,6 @@
 import { useState, type FormEvent } from "react";
 import { Link, useNavigate } from "react-router-dom";
+import { toast } from "sonner";
 import { useAuth } from "../context/AuthContext";
 
 export function RegisterPage() {
@@ -8,24 +9,20 @@ export function RegisterPage() {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
-    setError(null);
     setSubmitting(true);
     try {
       await register(name, email, password);
       navigate("/");
     } catch (err: any) {
-      setError(err.message ?? "Registrasi gagal");
+      toast.error(err.message ?? "Registrasi gagal");
     } finally {
       setSubmitting(false);
     }
   }
-
-  throw new Error("smoke test for boundary")
 
   return (
     <div className="max-w-sm mx-auto mt-16">
@@ -38,12 +35,6 @@ export function RegisterPage() {
       </p>
 
       <form onSubmit={handleSubmit} className="card flex flex-col gap-4">
-        {error && (
-          <p className="text-danger text-sm bg-red-50 border border-red-200 rounded-lg px-3 py-2">
-            {error}
-          </p>
-        )}
-
         <div>
           <label className="block text-sm font-medium mb-1">Nama</label>
           <input

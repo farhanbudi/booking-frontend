@@ -1,4 +1,5 @@
 import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { Toaster } from "sonner";
 import { AuthProvider } from "./context/AuthContext";
 import { ProtectedRoute } from "./components/ProtectedRoute";
 import { AdminRoute } from "./components/AdminRoute";
@@ -18,6 +19,13 @@ export default function App() {
     <BrowserRouter>
       <AuthProvider>
         <Navbar />
+        <Toaster
+          position="top-right"
+          richColors
+          toastOptions={{
+            style: { fontFamily: "Inter, sans-serif" },
+          }}
+        />
         <main className="px-4 pb-20">
           <Routes>
             <Route path="/login" element={<LoginPage />} />

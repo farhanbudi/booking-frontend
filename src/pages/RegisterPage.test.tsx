@@ -8,9 +8,18 @@ vi.mock("../context/AuthContext", () => ({
   useAuth: vi.fn(),
 }));
 
+vi.mock("sonner", () => ({
+  toast: {
+    error: vi.fn(),
+    success: vi.fn(),
+  },
+}));
+
 import { useAuth } from "../context/AuthContext";
+import { toast } from "sonner";
 
 const useAuthMock = vi.mocked(useAuth);
+const toastErrorMock = vi.mocked(toast.error);
 
 function authValue(overrides: Partial<ReturnType<typeof useAuth>> = {}) {
   return {
@@ -35,7 +44,10 @@ function renderRegister() {
 }
 
 describe("RegisterPage", () => {
-  beforeEach(() => useAuthMock.mockReset());
+  beforeEach(() => {
+    useAuthMock.mockReset();
+    toastErrorMock.mockReset();
+  });
 
   it("menampilkan form nama, email, dan password", () => {
     useAuthMock.mockReturnValue(authValue());
@@ -68,7 +80,7 @@ describe("RegisterPage", () => {
     );
   });
 
-  it("registrasi gagal menampilkan pesan error dari backend", async () => {
+  it("registrasi gagal menampilkan toast error dengan pesan dari backend", async () => {
     const register = vi
       .fn()
       .mockRejectedValue(new Error("Email sudah terdaftar"));
@@ -82,7 +94,7 @@ describe("RegisterPage", () => {
     await user.type(screen.getByPlaceholderText("Minimal 8 karakter"), "rahasia123");
     await user.click(screen.getByRole("button", { name: "Daftar" }));
 
-    expect(await screen.findByText("Email sudah terdaftar")).toBeInTheDocument();
+    expect(toastErrorMock).toHaveBeenCalledWith("Email sudah terdaftar");
     expect(screen.queryByText("Home Page")).not.toBeInTheDocument();
   });
 });

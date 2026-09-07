@@ -14,9 +14,19 @@ vi.mock("../../api/client", () => ({
   formatIDR: (n: number) => `Rp ${new Intl.NumberFormat("id-ID").format(n)}`,
 }));
 
+vi.mock("sonner", () => ({
+  toast: {
+    error: vi.fn(),
+    success: vi.fn(),
+  },
+}));
+
 import { resourceApi } from "../../api/client";
+import { toast } from "sonner";
 
 const resourceMock = vi.mocked(resourceApi);
+const toastErrorMock = vi.mocked(toast.error);
+const toastSuccessMock = vi.mocked(toast.success);
 
 const initialResources: Resource[] = [
   {
@@ -61,6 +71,8 @@ describe("AdminResourcesPage", () => {
     resourceMock.create.mockReset();
     resourceMock.update.mockReset();
     resourceMock.remove.mockReset();
+    toastErrorMock.mockReset();
+    toastSuccessMock.mockReset();
   });
 
   it("memanggil resourceApi.list saat mount dan menampilkan resource dari mock", async () => {
@@ -148,7 +160,7 @@ describe("AdminResourcesPage", () => {
     );
   });
 
-  it("menampilkan pesan error dari backend saat create gagal", async () => {
+  it("menampilkan toast error dari backend saat create gagal", async () => {
     resourceMock.list.mockResolvedValue(initialResources);
     resourceMock.create.mockRejectedValue(new Error("Nama ruangan sudah dipakai"));
     const user = userEvent.setup();
@@ -164,16 +176,18 @@ describe("AdminResourcesPage", () => {
     await user.type(screen.getByPlaceholderText("Minimal 1"), "4");
     await user.click(screen.getByRole("button", { name: "Tambah" }));
 
-    expect(
-      await screen.findByText("Nama ruangan sudah dipakai")
-    ).toBeInTheDocument();
+    await vi.waitFor(() =>
+      expect(toastErrorMock).toHaveBeenCalledWith("Nama ruangan sudah dipakai")
+    );
   });
 
-  it("menampilkan pesan error saat load daftar gagal", async () => {
+  it("menampilkan toast error saat load daftar gagal", async () => {
     resourceMock.list.mockRejectedValue(new Error("Gagal memuat ruangan"));
 
     renderAdminResources();
 
-    expect(await screen.findByText("Gagal memuat ruangan")).toBeInTheDocument();
+    await vi.waitFor(() =>
+      expect(toastErrorMock).toHaveBeenCalledWith("Gagal memuat ruangan")
+    );
   });
 });

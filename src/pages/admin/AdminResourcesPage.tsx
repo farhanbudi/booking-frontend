@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { toast } from "sonner";
 import { formatIDR, resourceApi, type Resource } from "../../api/client";
 
 interface FormState {
@@ -29,23 +30,19 @@ function parseRupiahInput(formatted: string): string {
 export function AdminResourcesPage() {
   const [resources, setResources] = useState<Resource[]>([]);
   const [loading, setLoading] = useState(true);
-  const [loadError, setLoadError] = useState<string | null>(null);
 
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editing, setEditing] = useState<Resource | null>(null);
   const [form, setForm] = useState<FormState>(emptyForm);
-  const [formError, setFormError] = useState<string | null>(null);
-  const [success, setSuccess] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [deactivatingId, setDeactivatingId] = useState<string | null>(null);
 
   function load() {
     setLoading(true);
-    setLoadError(null);
     resourceApi
       .list()
       .then(setResources)
-      .catch((err) => setLoadError(err.message))
+      .catch((err) => toast.error(err.message))
       .finally(() => setLoading(false));
   }
 
@@ -54,8 +51,6 @@ export function AdminResourcesPage() {
   function openCreate() {
     setEditing(null);
     setForm(emptyForm);
-    setFormError(null);
-    setSuccess(null);
     setIsFormOpen(true);
   }
 
@@ -68,8 +63,6 @@ export function AdminResourcesPage() {
       pricePerHour:
         r.pricePerHour != null ? formatRupiahInput(String(r.pricePerHour)) : "",
     });
-    setFormError(null);
-    setSuccess(null);
     setIsFormOpen(true);
   }
 
@@ -77,23 +70,20 @@ export function AdminResourcesPage() {
     setIsFormOpen(false);
     setEditing(null);
     setForm(emptyForm);
-    setFormError(null);
   }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    setFormError(null);
-    setSuccess(null);
 
     const name = form.name.trim();
     if (!name) {
-      setFormError("Nama ruangan wajib diisi.");
+      toast.error("Nama ruangan wajib diisi.");
       return;
     }
 
     const capacity = Number(form.capacity);
     if (!Number.isFinite(capacity) || capacity < 1) {
-      setFormError("Kapasitas harus angka minimal 1.");
+      toast.error("Kapasitas harus angka minimal 1.");
       return;
     }
 
@@ -103,7 +93,7 @@ export function AdminResourcesPage() {
     if (priceRaw) {
       const parsed = Number(priceRaw);
       if (!Number.isFinite(parsed) || parsed < 0) {
-        setFormError("Harga per jam harus angka 0 atau lebih.");
+        toast.error("Harga per jam harus angka 0 atau lebih.");
         return;
       }
       pricePerHour = parsed;
@@ -119,15 +109,15 @@ export function AdminResourcesPage() {
     try {
       if (editing) {
         await resourceApi.update(editing.id, payload);
-        setSuccess("Ruangan berhasil diperbarui.");
+        toast.success("Ruangan berhasil diperbarui.");
       } else {
         await resourceApi.create(payload);
-        setSuccess("Ruangan berhasil ditambahkan.");
+        toast.success("Ruangan berhasil ditambahkan.");
       }
       closeForm();
       load();
     } catch (err: any) {
-      setFormError(err?.message ?? "Gagal menyimpan ruangan.");
+      toast.error(err?.message ?? "Gagal menyimpan ruangan.");
     } finally {
       setSubmitting(false);
     }
@@ -137,10 +127,10 @@ export function AdminResourcesPage() {
     setDeactivatingId(r.id);
     try {
       await resourceApi.remove(r.id);
-      setSuccess(`Ruangan "${r.name}" berhasil dinonaktifkan.`);
+      toast.success(`Ruangan "${r.name}" berhasil dinonaktifkan.`);
       load();
     } catch (err: any) {
-      setLoadError(err?.message ?? "Gagal menonaktifkan ruangan.");
+      toast.error(err?.message ?? "Gagal menonaktifkan ruangan.");
     } finally {
       setDeactivatingId(null);
     }
@@ -153,16 +143,7 @@ export function AdminResourcesPage() {
         Tambah, ubah, atau nonaktifkan ruangan yang bisa dibooking user.
       </p>
 
-      {loadError && (
-        <p className="text-danger text-sm bg-red-50 border border-red-200 rounded-lg px-3 py-2 mb-4">
-          {loadError}
-        </p>
-      )}
-      {success && (
-        <p className="text-sm bg-green-50 text-green-700 border border-green-200 rounded-lg px-3 py-2 mb-4">
-          {success}
-        </p>
-      )}
+      {loading && <p className="text-muted">Memuat daftar ruangan...</p>}
 
       <div className="flex justify-end mb-4">
         {!isFormOpen && (
@@ -177,12 +158,6 @@ export function AdminResourcesPage() {
           <h3 className="font-medium mb-4">
             {editing ? "Edit ruangan" : "Tambah ruangan baru"}
           </h3>
-
-          {formError && (
-            <p className="text-danger text-sm bg-red-50 border border-red-200 rounded-lg px-3 py-2 mb-4">
-              {formError}
-            </p>
-          )}
 
           <div className="grid sm:grid-cols-2 gap-4">
             <div>
@@ -261,8 +236,6 @@ export function AdminResourcesPage() {
           </div>
         </form>
       )}
-
-      {loading && <p className="text-muted">Memuat daftar ruangan...</p>}
 
       {!loading && resources.length === 0 && (
         <div className="card text-center text-muted py-10">

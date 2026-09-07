@@ -1,5 +1,6 @@
 import { useState, type FormEvent } from "react";
 import { Link, useNavigate } from "react-router-dom";
+import { toast } from "sonner";
 import { useAuth } from "../context/AuthContext";
 
 export function LoginPage() {
@@ -7,18 +8,16 @@ export function LoginPage() {
   const navigate = useNavigate();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
-    setError(null);
     setSubmitting(true);
     try {
       await login(email, password);
       navigate("/");
     } catch (err: any) {
-      setError(err.message ?? "Login gagal");
+      toast.error(err.message ?? "Login gagal");
     } finally {
       setSubmitting(false);
     }
@@ -35,12 +34,6 @@ export function LoginPage() {
       </p>
 
       <form onSubmit={handleSubmit} className="card flex flex-col gap-4">
-        {error && (
-          <p className="text-danger text-sm bg-red-50 border border-red-200 rounded-lg px-3 py-2">
-            {error}
-          </p>
-        )}
-
         <div>
           <label className="block text-sm font-medium mb-1">Email</label>
           <input

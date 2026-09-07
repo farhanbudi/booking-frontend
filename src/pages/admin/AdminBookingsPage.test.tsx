@@ -9,9 +9,18 @@ vi.mock("../../api/client", () => ({
   },
 }));
 
+vi.mock("sonner", () => ({
+  toast: {
+    error: vi.fn(),
+    success: vi.fn(),
+  },
+}));
+
 import { bookingApi } from "../../api/client";
+import { toast } from "sonner";
 
 const bookingMock = vi.mocked(bookingApi);
+const toastErrorMock = vi.mocked(toast.error);
 
 const bookings: DetailBooking[] = [
   {
@@ -53,6 +62,7 @@ function renderAdminBookings() {
 describe("AdminBookingsPage", () => {
   beforeEach(() => {
     bookingMock.listAll.mockReset();
+    toastErrorMock.mockReset();
   });
 
   it("memanggil bookingApi.listAll saat mount", async () => {
@@ -85,14 +95,14 @@ describe("AdminBookingsPage", () => {
     expect(screen.queryByRole("button", { name: /Hapus/ })).not.toBeInTheDocument();
   });
 
-  it("menampilkan pesan error saat listAll gagal", async () => {
+  it("menampilkan toast error saat listAll gagal", async () => {
     bookingMock.listAll.mockRejectedValue(new Error("Gagal memuat semua booking"));
 
     renderAdminBookings();
 
-    expect(
-      await screen.findByText("Gagal memuat semua booking")
-    ).toBeInTheDocument();
+    await vi.waitFor(() =>
+      expect(toastErrorMock).toHaveBeenCalledWith("Gagal memuat semua booking")
+    );
   });
 
   it("menampilkan pesan state kosong saat tidak ada booking", async () => {

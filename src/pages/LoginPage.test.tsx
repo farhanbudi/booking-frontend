@@ -8,9 +8,18 @@ vi.mock("../context/AuthContext", () => ({
   useAuth: vi.fn(),
 }));
 
+vi.mock("sonner", () => ({
+  toast: {
+    error: vi.fn(),
+    success: vi.fn(),
+  },
+}));
+
 import { useAuth } from "../context/AuthContext";
+import { toast } from "sonner";
 
 const useAuthMock = vi.mocked(useAuth);
+const toastErrorMock = vi.mocked(toast.error);
 
 function authValue(overrides: Partial<ReturnType<typeof useAuth>> = {}) {
   return {
@@ -35,7 +44,10 @@ function renderLogin() {
 }
 
 describe("LoginPage", () => {
-  beforeEach(() => useAuthMock.mockReset());
+  beforeEach(() => {
+    useAuthMock.mockReset();
+    toastErrorMock.mockReset();
+  });
 
   it("menampilkan form email dan password", () => {
     useAuthMock.mockReturnValue(authValue());
@@ -62,7 +74,7 @@ describe("LoginPage", () => {
     expect(login).toHaveBeenCalledWith("budi@example.com", "rahasia");
   });
 
-  it("login gagal menampilkan pesan error dari backend", async () => {
+  it("login gagal menampilkan toast error dengan pesan dari backend", async () => {
     const login = vi
       .fn()
       .mockRejectedValue(new Error("Email atau password salah"));
@@ -75,7 +87,7 @@ describe("LoginPage", () => {
     await user.type(screen.getByPlaceholderText("••••••••"), "salah");
     await user.click(screen.getByRole("button", { name: "Masuk" }));
 
-    expect(await screen.findByText("Email atau password salah")).toBeInTheDocument();
+    expect(toastErrorMock).toHaveBeenCalledWith("Email atau password salah");
     expect(screen.queryByText("Home Page")).not.toBeInTheDocument();
   });
 

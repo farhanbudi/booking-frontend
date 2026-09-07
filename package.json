@@ -17,7 +17,8 @@
     "react-big-calendar": "^1.15.0",
     "react-datepicker": "^9.1.0",
     "react-dom": "^18.3.1",
-    "react-router-dom": "^6.28.0"
+    "react-router-dom": "^6.28.0",
+    "sonner": "^1.7.0"
   },
   "devDependencies": {
     "@playwright/test": "^1.62.1",

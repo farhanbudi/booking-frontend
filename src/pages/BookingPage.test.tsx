@@ -20,11 +20,21 @@ vi.mock("../api/client", () => ({
   redirectToCheckout: vi.fn(),
 }));
 
+vi.mock("sonner", () => ({
+  toast: {
+    error: vi.fn(),
+    success: vi.fn(),
+  },
+}));
+
 import { bookingApi, redirectToCheckout, resourceApi } from "../api/client";
+import { toast } from "sonner";
 
 const resourceMock = vi.mocked(resourceApi);
 const bookingMock = vi.mocked(bookingApi);
 const redirectMock = vi.mocked(redirectToCheckout);
+const toastErrorMock = vi.mocked(toast.error);
+const toastSuccessMock = vi.mocked(toast.success);
 
 const resource: Resource = {
   id: "r1",
@@ -37,7 +47,15 @@ const resource: Resource = {
 
 const paidResource: Resource = { ...resource, pricePerHour: 50000 };
 
-const todayISO = new Date().toISOString().slice(0, 10);
+const todayISO = (() => {
+  // Harus konsisten dengan vi.setSystemTime(2026-09-03) di beforeEach.
+  // BookingPage.useEffect memanggil bookingApi.availability dengan
+  // dateToISO(startOfToday()), dan startOfToday() membaca Date.now
+  // (yang sudah di-fake ke 2026-09-03). Kalau todayISO di sini di-capture
+  // dari real wall clock (host), tanggal slot akan beda dari tanggal
+  // kalender dan RBC akan memfilter events keluar dari day view.
+  return new Date(2026, 8, 3).toISOString().slice(0, 10);
+})();
 const slots = [
   { startTime: `${todayISO}T09:00:00.000Z`, endTime: `${todayISO}T10:00:00.000Z` },
   { startTime: `${todayISO}T10:00:00.000Z`, endTime: `${todayISO}T11:00:00.000Z` },
@@ -59,6 +77,8 @@ describe("BookingPage", () => {
     bookingMock.availability.mockReset();
     bookingMock.create.mockReset();
     redirectMock.mockReset();
+    toastErrorMock.mockReset();
+    toastSuccessMock.mockReset();
     // Kunci "sekarang" ke 07:00 agar default startTime 09:00 selalu di masa depan,
     // sehingga validasi isStartTimeInPast tidak membuat tombol Booking disabled.
     // Hanya fake Date — promise/setTimeout timers tetap real agar async resolve normal.
@@ -81,8 +101,12 @@ describe("BookingPage", () => {
 
     const calendar = document.querySelector(".rbc-calendar");
     expect(calendar).toBeInTheDocument();
-    const events = document.querySelectorAll(".rbc-event");
-    expect(events).toHaveLength(2);
+    // bookedSlots dimuat via useEffect setelah resource; tunggu sampai
+    // RBC me-render event blocks-nya.
+    await vi.waitFor(
+      () => expect(document.querySelectorAll(".rbc-event")).toHaveLength(2),
+      { timeout: 3000 }
+    );
   });
 
   it("menampilkan kalender kosong saat tidak ada slot terisi", async () => {
@@ -108,7 +132,7 @@ describe("BookingPage", () => {
     expect(calendar).toBeInTheDocument();
   });
 
-  it("booking sukses menampilkan pesan sukses dan me-refresh slot", async () => {
+  it("booking sukses memicu toast.success dengan pesan sukses dan me-refresh slot", async () => {
     resourceMock.get.mockResolvedValue(resource);
     bookingMock.availability.mockResolvedValue([]);
     bookingMock.create.mockResolvedValue({
@@ -127,14 +151,16 @@ describe("BookingPage", () => {
 
     await user.click(screen.getByRole("button", { name: "Booking ruangan ini" }));
 
-    expect(await screen.findByText("Booking berhasil dibuat!")).toBeInTheDocument();
+    await vi.waitFor(() =>
+      expect(toastSuccessMock).toHaveBeenCalledWith("Booking berhasil dibuat!")
+    );
     expect(bookingMock.create).toHaveBeenCalledWith(
       expect.objectContaining({ resourceId: "r1" })
     );
     expect(bookingMock.availability).toHaveBeenCalledTimes(2);
   });
 
-  it("booking bentrok menampilkan pesan error backend tanpa pesan sukses", async () => {
+  it("booking bentrok memicu toast.error dengan pesan error backend tanpa toast.success", async () => {
     resourceMock.get.mockResolvedValue(resource);
     bookingMock.availability.mockResolvedValue([]);
     bookingMock.create.mockRejectedValue(new Error("Slot sudah dipesan"));
@@ -146,8 +172,10 @@ describe("BookingPage", () => {
 
     await user.click(screen.getByRole("button", { name: "Booking ruangan ini" }));
 
-    expect(await screen.findByText("Slot sudah dipesan")).toBeInTheDocument();
-    expect(screen.queryByText("Booking berhasil dibuat!")).not.toBeInTheDocument();
+    await vi.waitFor(() =>
+      expect(toastErrorMock).toHaveBeenCalledWith("Slot sudah dipesan")
+    );
+    expect(toastSuccessMock).not.toHaveBeenCalled();
   });
 
   it("menampilkan 'Gratis' untuk resource tanpa harga", async () => {
@@ -194,7 +222,7 @@ describe("BookingPage", () => {
     await user.click(screen.getByRole("button", { name: "Booking ruangan ini" }));
 
     expect(redirectMock).toHaveBeenCalledWith("https://checkout.stripe.com/pay");
-    expect(screen.queryByText("Booking berhasil dibuat!")).not.toBeInTheDocument();
+    expect(toastSuccessMock).not.toHaveBeenCalled();
   });
 
   describe("pembatasan jam operasional 08:00–20:00", () => {

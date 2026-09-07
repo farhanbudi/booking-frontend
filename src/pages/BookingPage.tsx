@@ -26,6 +26,7 @@ import {
   MAX_HOUR,
   MIN_HOUR,
 } from "../utils/bookingTime";
+import { toast } from "sonner";
 
 registerLocale("id", idLocale);
 
@@ -70,8 +71,6 @@ export function BookingPage() {
   const [startTime, setStartTime] = useState<Date>(defaultTime());
   const [duration, setDuration] = useState(60); // menit
 
-  const [error, setError] = useState<string | null>(null);
-  const [success, setSuccess] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [redirecting, setRedirecting] = useState(false);
   const [rateLimitLeft, setRateLimitLeft] = useState(0);
@@ -87,7 +86,7 @@ export function BookingPage() {
 
   useEffect(() => {
     if (!id) return;
-    resourceApi.get(id).then(setResource).catch((err) => setError(err.message));
+    resourceApi.get(id).then(setResource).catch((err) => toast.error(err.message));
   }, [id]);
 
   useEffect(() => {
@@ -95,18 +94,16 @@ export function BookingPage() {
     bookingApi
       .availability(id, dateToISO(date))
       .then(setBookedSlots)
-      .catch((err) => setError(err.message));
+      .catch((err) => toast.error(err.message));
   }, [id, date]);
 
   async function handleBook() {
     if (!id) return;
-    setError(null);
-    setSuccess(null);
     setSubmitting(true);
 
     // Guard server-side untuk startTime yang sudah lewat (validasi UI sudah disable tombol).
     if (isStartTimeInPast(date, startTime)) {
-      setError("Jam mulai sudah lewat dari waktu saat ini.");
+      toast.error("Jam mulai sudah lewat dari waktu saat ini.");
       setSubmitting(false);
       return;
     }
@@ -135,14 +132,14 @@ export function BookingPage() {
         return;
       }
 
-      setSuccess("Booking berhasil dibuat!");
+      toast.success("Booking berhasil dibuat!");
       // refresh slot terisi supaya langsung terlihat
       const updated = await bookingApi.availability(id, dateToISO(date));
       setBookedSlots(updated);
     } catch (err: any) {
       // Pesan dari backend sudah informatif untuk kasus konflik (409),
       // termasuk saat exclusion constraint di database yang menangkap overlap.
-      setError(err?.message ?? "Gagal membuat booking");
+      toast.error(err?.message ?? "Gagal membuat booking");
 
       // Rate limit 429: baca header Retry-After (detik) dan nonaktifkan
       // tombol Booking sementara sambil menampilkan hitung mundur.
@@ -425,21 +422,6 @@ export function BookingPage() {
           </div>
         </div>
 
-        {error && (
-          <p className="text-danger text-sm bg-red-50 border border-red-200 rounded-lg px-3 py-2 mb-4">
-            {error}
-            {rateLimitLeft > 0 && (
-              <span className="block mt-1 font-medium">
-                Silakan coba lagi dalam {rateLimitLeft} detik.
-              </span>
-            )}
-          </p>
-        )}
-        {success && (
-          <p className="text-sm bg-green-50 text-green-700 border border-green-200 rounded-lg px-3 py-2 mb-4">
-            {success}
-          </p>
-        )}
         {timeConflictWarning && (
           <p className="text-sm text-danger mt-1">
             {!isWithinBookingHours(startTime) || exceedsBookingHours(startTime, duration)
