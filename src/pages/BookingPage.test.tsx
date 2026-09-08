@@ -47,18 +47,14 @@ const resource: Resource = {
 
 const paidResource: Resource = { ...resource, pricePerHour: 50000 };
 
-const todayISO = (() => {
-  // Harus konsisten dengan vi.setSystemTime(2026-09-03) di beforeEach.
-  // BookingPage.useEffect memanggil bookingApi.availability dengan
-  // dateToISO(startOfToday()), dan startOfToday() membaca Date.now
-  // (yang sudah di-fake ke 2026-09-03). Kalau todayISO di sini di-capture
-  // dari real wall clock (host), tanggal slot akan beda dari tanggal
-  // kalender dan RBC akan memfilter events keluar dari day view.
-  return new Date(2026, 8, 3).toISOString().slice(0, 10);
-})();
+function localSlot(hour: number, minute = 0) {
+  // 2026-09-03 harus sama persis dengan tanggal yang di-fake di vi.setSystemTime
+  return new Date(2026, 8, 3, hour, minute, 0, 0).toISOString();
+}
+
 const slots = [
-  { startTime: `${todayISO}T09:00:00.000Z`, endTime: `${todayISO}T10:00:00.000Z` },
-  { startTime: `${todayISO}T10:00:00.000Z`, endTime: `${todayISO}T11:00:00.000Z` },
+  { startTime: localSlot(9), endTime: localSlot(10) },
+  { startTime: localSlot(10), endTime: localSlot(11) },
 ];
 
 function renderBooking(initial = "/resources/r1") {
