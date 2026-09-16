@@ -36,7 +36,7 @@ describe("api client - request wrapper", () => {
   afterEach(() => vi.unstubAllGlobals());
 
   it("menambahkan header Authorization Bearer saat token ada di localStorage", async () => {
-    localStorage.setItem("token", "tok123");
+    localStorage.setItem("accessToken", "tok123");
     const fetchMock = vi.fn().mockResolvedValue(okResponse(me));
     vi.stubGlobal("fetch", fetchMock);
 
@@ -85,22 +85,32 @@ describe("api client - auth token lifecycle", () => {
   beforeEach(() => localStorage.clear());
   afterEach(() => vi.unstubAllGlobals());
 
-  it("authApi.login menyimpan token ke localStorage", async () => {
+  it("authApi.login menyimpan accessToken dan refreshToken ke localStorage", async () => {
     vi.stubGlobal(
       "fetch",
-      vi.fn().mockResolvedValue(okResponse({ token: "tok123" }))
+      vi.fn().mockResolvedValue(okResponse({ accessToken: "access123", refreshToken: "refresh123" }))
     );
 
     await authApi.login({ email: "budi@example.com", password: "rahasia" });
 
-    expect(localStorage.getItem("token")).toBe("tok123");
+    expect(localStorage.getItem("accessToken")).toBe("access123");
+    expect(localStorage.getItem("refreshToken")).toBe("refresh123");
   });
 
-  it("authApi.logout menghapus token dari localStorage", () => {
-    localStorage.setItem("token", "tok123");
+  it("authApi.logout menghapus accessToken dan refreshToken dari localStorage", async () => {
+    localStorage.setItem("accessToken", "access123");
+    localStorage.setItem("refreshToken", "refresh123");
+    localStorage.setItem("token", "old-token");
 
-    authApi.logout();
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue(okResponse({ success: true }))
+    );
 
+    await authApi.logout();
+
+    expect(localStorage.getItem("accessToken")).toBeNull();
+    expect(localStorage.getItem("refreshToken")).toBeNull();
     expect(localStorage.getItem("token")).toBeNull();
   });
 });
@@ -108,7 +118,7 @@ describe("api client - auth token lifecycle", () => {
 describe("api client - paid booking create", () => {
   beforeEach(() => {
     localStorage.clear();
-    localStorage.setItem("token", "tok");
+    localStorage.setItem("accessToken", "tok");
   });
   afterEach(() => vi.unstubAllGlobals());
 
@@ -169,7 +179,7 @@ describe("api client - paid booking create", () => {
 describe("api client - checkout url", () => {
   beforeEach(() => {
     localStorage.clear();
-    localStorage.setItem("token", "tok");
+    localStorage.setItem("accessToken", "tok");
   });
   afterEach(() => vi.unstubAllGlobals());
 

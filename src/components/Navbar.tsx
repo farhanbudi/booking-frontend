@@ -26,8 +26,8 @@ export function Navbar() {
     };
   }, [adminOpen]);
 
-  function handleLogout() {
-    logout();
+  async function handleLogout() {
+    await logout();
     navigate("/login");
   }
 

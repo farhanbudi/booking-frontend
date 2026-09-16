@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { Navbar } from "./Navbar";
@@ -6,6 +6,10 @@ import type { User } from "../api/client";
 
 vi.mock("../context/AuthContext", () => ({
   useAuth: vi.fn(),
+}));
+
+vi.mock("../api/client", () => ({
+  onAuthExpired: vi.fn(() => vi.fn()),
 }));
 
 import { useAuth } from "../context/AuthContext";
@@ -85,8 +89,8 @@ describe("Navbar", () => {
     expect(screen.queryByText("Masuk")).not.toBeInTheDocument();
   });
 
-  it("logout memanggil logout dan mengarahkan ke /login", () => {
-    const logout = vi.fn();
+  it("logout memanggil logout dan mengarahkan ke /login", async () => {
+    const logout = vi.fn().mockResolvedValue(undefined);
     useAuthMock.mockReturnValue({
       user,
       loading: false,
@@ -99,8 +103,10 @@ describe("Navbar", () => {
 
     fireEvent.click(screen.getByText("Keluar"));
 
-    expect(logout).toHaveBeenCalled();
-    expect(screen.getByText("Login Page")).toBeInTheDocument();
+    await waitFor(() => {
+      expect(logout).toHaveBeenCalled();
+      expect(screen.getByText("Login Page")).toBeInTheDocument();
+    });
   });
 
   describe("dropdown admin", () => {

@@ -1,12 +1,12 @@
 import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
-import { authApi, type User } from "../api/client";
+import { authApi, type User, onAuthExpired } from "../api/client";
 
 interface AuthContextValue {
   user: User | null;
   loading: boolean;
   login: (email: string, password: string) => Promise<void>;
   register: (name: string, email: string, password: string) => Promise<void>;
-  logout: () => void;
+  logout: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextValue | undefined>(undefined);
@@ -16,7 +16,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const token = localStorage.getItem("token");
+    const token = localStorage.getItem("accessToken");
     if (!token) {
       setLoading(false);
       return;
@@ -25,8 +25,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     authApi
       .me()
       .then(setUser)
-      .catch(() => localStorage.removeItem("token"))
+      .catch(() => localStorage.removeItem("accessToken"))
       .finally(() => setLoading(false));
+  }, []);
+
+  useEffect(() => {
+    const unsubscribe = onAuthExpired(() => {
+      setUser(null);
+    });
+    return unsubscribe;
   }, []);
 
   async function login(email: string, password: string) {
@@ -40,8 +47,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     await login(email, password);
   }
 
-  function logout() {
-    authApi.logout();
+  async function logout() {
+    await authApi.logout();
     setUser(null);
   }
 

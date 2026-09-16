@@ -2,15 +2,80 @@ import { logger } from "../utils/logger";
 
 const BASE_URL = import.meta.env.VITE_API_BASE_URL ?? "http://localhost:3000";
 
-function getToken() {
-  return localStorage.getItem("token");
+function getAccessToken() {
+  return localStorage.getItem("accessToken");
+}
+
+function getRefreshToken() {
+  return localStorage.getItem("refreshToken");
+}
+
+function setTokens(accessToken: string, refreshToken: string) {
+  localStorage.setItem("accessToken", accessToken);
+  localStorage.setItem("refreshToken", refreshToken);
+}
+
+function clearTokens() {
+  localStorage.removeItem("accessToken");
+  localStorage.removeItem("refreshToken");
+  localStorage.removeItem("token");
+}
+
+let refreshPromise: Promise<string> | null = null;
+
+async function refreshAccessToken(): Promise<string> {
+  if (refreshPromise) return refreshPromise;
+
+  refreshPromise = (async () => {
+    const refreshToken = getRefreshToken();
+    if (!refreshToken) {
+      throw new Error("Tidak ada refresh token tersimpan");
+    }
+
+    const res = await fetch(`${BASE_URL}/auth/refresh`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ refreshToken }),
+    });
+
+    if (!res.ok) {
+      throw new Error("Refresh token tidak valid atau sudah expired");
+    }
+
+    const data = await res.json();
+    localStorage.setItem("accessToken", data.accessToken);
+    return data.accessToken;
+  })();
+
+  try {
+    return await refreshPromise;
+  } finally {
+    refreshPromise = null;
+  }
+}
+
+type AuthExpiredListener = () => void;
+const authExpiredListeners: AuthExpiredListener[] = [];
+
+export function onAuthExpired(listener: AuthExpiredListener) {
+  authExpiredListeners.push(listener);
+  return () => {
+    const idx = authExpiredListeners.indexOf(listener);
+    if (idx >= 0) authExpiredListeners.splice(idx, 1);
+  };
+}
+
+function notifyAuthExpired() {
+  clearTokens();
+  authExpiredListeners.forEach((fn) => fn());
 }
 
 async function request<T>(
   path: string,
-  options: RequestInit = {}
+  options: RequestInit = {},
+  _isRetry = false
 ): Promise<T> {
-  const token = getToken();
+  const token = getAccessToken();
 
   const res = await fetch(`${BASE_URL}${path}`, {
     ...options,
@@ -20,6 +85,20 @@ async function request<T>(
       ...options.headers,
     },
   });
+
+  const isAuthEndpoint =
+    path.startsWith("/auth/login") ||
+    path.startsWith("/auth/register") ||
+    path.startsWith("/auth/refresh");
+
+  if (res.status === 401 && !isAuthEndpoint && !_isRetry) {
+    try {
+      await refreshAccessToken();
+      return request<T>(path, options, true);
+    } catch {
+      notifyAuthExpired();
+    }
+  }
 
   const data = await res.json().catch(() => null);
 
@@ -122,17 +201,32 @@ export const authApi = {
     }),
 
   login: async (input: { email: string; password: string }) => {
-    const { token } = await request<{ token: string }>("/auth/login", {
-      method: "POST",
-      body: JSON.stringify(input),
-    });
-    localStorage.setItem("token", token);
-    return token;
+    const data = await request<{ accessToken: string; refreshToken: string }>(
+      "/auth/login",
+      { method: "POST", body: JSON.stringify(input) }
+    );
+    setTokens(data.accessToken, data.refreshToken);
   },
 
   me: () => request<User>("/auth/me"),
 
-  logout: () => localStorage.removeItem("token"),
+  logout: async () => {
+    const refreshToken = getRefreshToken();
+    clearTokens();
+
+    if (refreshToken) {
+      try {
+        await request("/auth/logout", {
+          method: "POST",
+          body: JSON.stringify({ refreshToken }),
+        });
+      } catch {
+        // Logout di backend gagal (misal offline) TIDAK APA-APA — user tetap
+        // ter-logout secara lokal karena token sudah dihapus di atas. JANGAN
+        // lempar error dari sini, JANGAN blok proses logout gara-gara ini.
+      }
+    }
+  },
 };
 
 // ---- Resources ----

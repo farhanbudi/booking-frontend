@@ -10,6 +10,7 @@ vi.mock("../api/client", () => ({
     me: vi.fn(),
     logout: vi.fn(),
   },
+  onAuthExpired: vi.fn(() => vi.fn()),
 }));
 
 const authMock = vi.mocked(authApi);
@@ -55,7 +56,7 @@ describe("AuthContext", () => {
   });
 
   it("memulihkan user dari token saat mount dan selesai loading", async () => {
-    localStorage.setItem("token", "tok123");
+    localStorage.setItem("accessToken", "tok123");
     authMock.me.mockResolvedValue(me);
 
     renderWithProvider();
@@ -65,18 +66,18 @@ describe("AuthContext", () => {
   });
 
   it("menghapus token dan user tetap null saat /auth/me gagal", async () => {
-    localStorage.setItem("token", "tok-invalid");
+    localStorage.setItem("accessToken", "tok-invalid");
     authMock.me.mockRejectedValue(new Error("Unauthorized"));
 
     renderWithProvider();
 
     await waitFor(() => expect(screen.getByTestId("loading").textContent).toBe("false"));
     expect(screen.getByTestId("user").textContent).toBe("null");
-    expect(localStorage.getItem("token")).toBeNull();
+    expect(localStorage.getItem("accessToken")).toBeNull();
   });
 
   it("login menyimpan token, memanggil /auth/me, dan mengeset user", async () => {
-    authMock.login.mockResolvedValue("tok123");
+    authMock.login.mockResolvedValue(undefined);
     authMock.me.mockResolvedValue(me);
 
     renderWithProvider();
@@ -95,7 +96,7 @@ describe("AuthContext", () => {
 
   it("register membuat akun lalu login sehingga user ter-set", async () => {
     authMock.register.mockResolvedValue(me);
-    authMock.login.mockResolvedValue("tok123");
+    authMock.login.mockResolvedValue(undefined);
     authMock.me.mockResolvedValue(me);
 
     renderWithProvider();
@@ -114,7 +115,7 @@ describe("AuthContext", () => {
   });
 
   it("logout menghapus token dan mengosongkan user", async () => {
-    authMock.login.mockResolvedValue("tok123");
+    authMock.login.mockResolvedValue(undefined);
     authMock.me.mockResolvedValue(me);
 
     renderWithProvider();
@@ -127,7 +128,9 @@ describe("AuthContext", () => {
 
     fireEvent.click(screen.getByText("logout"));
 
-    expect(authMock.logout).toHaveBeenCalled();
-    expect(screen.getByTestId("user").textContent).toBe("null");
+    await waitFor(() => {
+      expect(authMock.logout).toHaveBeenCalled();
+      expect(screen.getByTestId("user").textContent).toBe("null");
+    });
   });
 });
