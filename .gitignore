@@ -6,6 +6,7 @@ node_modules/
 .env.local
 .env.test
 .env.e2e
+.env.prod
 
 # Build output
 dist/
