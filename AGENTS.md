@@ -5,10 +5,23 @@ Booking room-reservation frontend: React 18 + Vite 5 + TypeScript + Tailwind v3 
 ## Commands
 
 - `npm run dev` — dev server on port 5173 (fixed in `vite.config.ts`).
-- `npm run build` — verification step: runs `tsc -b` typecheck then `vite build`. There is **no lint script**; use `npm run build` to verify type safety and production build.
+- `npm run build` — production build: runs `tsc -b` typecheck then `vite build`.
+- `npm run typecheck` — type check only (`tsc --noEmit`); fastest way to verify type safety without producing a bundle.
+- **No lint script**: no linter (ESLint / Biome / Prettier) is configured in this repo, so there is no `npm run lint` and CI has no lint step. Use `npm run typecheck` + `npm run build` to verify changes.
 - `npm run test` — unit/component tests (Vitest + React Testing Library, jsdom). Runs without the backend; no `npm run dev` needed.
 - `npm run test:e2e` — Playwright E2E tests (`e2e/`). **Prerequisites:** the **test backend** (`../booking-backend` on `:3001`) must be running, since the e2e dev server loads `.env.e2e` (`VITE_API_BASE_URL=http://localhost:3001`). The dev server is started automatically by Playwright (`vite --mode e2e`, port `:5173`). First install browsers with `npx playwright install chromium`. E2E specs register their own throwaway users, so no seeded test account is required.
 - `npm run dev:e2e` — manual Vite dev server bound to the **e2e** environment (loads `.env.e2e` → points at backend on `:3001`). Only use this when you want the e2e frontend up without running Playwright.
+
+## CI
+
+GitHub Actions workflow at `.github/workflows/ci.yml`:
+
+- **Triggers**: every pull request, and every push to `main`.
+- **Job `frontend`**: `npm ci` → `npm run typecheck` → `npm run test` → `npm run build`. There is **no lint step** (no linter is configured) and **no E2E step** (E2E needs a live backend).
+- **Job `ci-success`**: the aggregate gate (`needs: [frontend]`, `if: always()`). **This is the status check to require in branch protection**: Settings → Branches → rule for `main` → "Require status checks to pass" → `ci-success`.
+- **Env**: dummy `VITE_BASE_URL` / `VITE_API_BASE_URL` are set at job level. No secrets are used and no backend is contacted.
+- `tsconfig.tsbuildinfo` is a local build artifact and is gitignored; `npm run typecheck` uses `tsc --noEmit`, so type checking never depends on it.
+- Backend CI lives in the sibling repo `../booking-backend`; this repo neither builds nor deploys the backend.
 
 ### E2E / test backend wiring
 
