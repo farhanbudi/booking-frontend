@@ -11,16 +11,13 @@ permissions:
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
   frontend:
     name: Frontend
     runs-on: ubuntu-latest
     timeout-minutes: 15
-    defaults:
-      run:
-        working-directory: .
     env:
       # Nilai dummy: build & unit test tidak butuh backend sungguhan.
       # Jangan ganti dengan secret atau URL deploy.
@@ -33,7 +30,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 22
+          node-version: 24
           cache: npm
 
       - name: Install dependencies
@@ -51,7 +48,7 @@ jobs:
   # Job agregat: satu-satunya status check yang perlu di-require saat branch protection.
   # Nama job ini harus persis "ci-success".
   ci-success:
-    name: ci-success
+    name: CI Success
     if: always()
     needs:
       - frontend
