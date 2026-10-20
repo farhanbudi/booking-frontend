@@ -12,6 +12,9 @@ node_modules/
 dist/
 dist-ssr/
 
+# TypeScript build info
+tsconfig.tsbuildinfo
+
 # Vite cache
 .vite/
 
