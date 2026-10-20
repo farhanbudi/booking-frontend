@@ -118,26 +118,37 @@ describe("CustomToolbar", () => {
     });
 
     it("memanggil onNavigate dengan Navigate.DATE dan tanggal baru saat tanggal dipilih", async () => {
-      const user = userEvent.setup();
-      const { onNavigate } = renderToolbar();
+      // Komponen memakai minDate={new Date()} (jam nyata). Karena tanggal fixture
+      // sudah lewat dari waktu sekarang, seluruh hari pada September 2026 menjadi
+      // disabled dan tidak ada day cell yang bisa diklik. Jam dibekukan agar test
+      // tidak bergantung pada waktu eksekusi.
+      vi.useFakeTimers({ shouldAdvanceTime: true });
+      vi.setSystemTime(new Date("2026-09-01T08:00:00.000Z"));
 
-      const input = screen.getByRole("textbox");
-      await user.click(input);
+      try {
+        const user = userEvent.setup();
+        const { onNavigate } = renderToolbar();
 
-      // Tunggu DatePicker portal muncul, lalu klik day cell untuk tanggal 15.
-      await screen.findByRole("dialog", { name: /Choose Date/ });
-      const day15 = document.querySelector<HTMLDivElement>(
-        '.react-datepicker__day:not(.react-datepicker__day--outside):not(.react-datepicker__day--disabled)'
-      );
-      expect(day15).not.toBeNull();
-      if (day15) {
-        await user.click(day15);
+        const input = screen.getByRole("textbox");
+        await user.click(input);
+
+        // Tunggu DatePicker portal muncul, lalu klik day cell untuk tanggal 15.
+        await screen.findByRole("dialog", { name: /Choose Date/ });
+        const day15 = document.querySelector<HTMLDivElement>(
+          '.react-datepicker__day:not(.react-datepicker__day--outside):not(.react-datepicker__day--disabled)'
+        );
+        expect(day15).not.toBeNull();
+        if (day15) {
+          await user.click(day15);
+        }
+
+        // Cari panggilan onNavigate dengan Navigate.DATE.
+        const dateCall = onNavigate.mock.calls.find((c) => c[0] === Navigate.DATE);
+        expect(dateCall).toBeDefined();
+        expect(dateCall![1]).toBeInstanceOf(Date);
+      } finally {
+        vi.useRealTimers();
       }
-
-      // Cari panggilan onNavigate dengan Navigate.DATE.
-      const dateCall = onNavigate.mock.calls.find((c) => c[0] === Navigate.DATE);
-      expect(dateCall).toBeDefined();
-      expect(dateCall![1]).toBeInstanceOf(Date);
     });
   });
 });
