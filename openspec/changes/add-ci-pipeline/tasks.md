@@ -30,17 +30,17 @@
 
 ## 5. Documentation
 
-- [ ] 5.1 Update `AGENTS.md` to document the new `typecheck` script, the CI workflow, and the `ci-success` required status check (verify: the commands section mentions `npm run typecheck` and the CI gate)
-- [ ] 5.2 Add a short note in `AGENTS.md` that no lint step exists because no linter is configured (verify: the note is present and consistent with the actual `package.json`)
+- [x] 5.1 Update `AGENTS.md` to document the new `typecheck` script, the CI workflow, and the `ci-success` required status check (verify: the commands section mentions `npm run typecheck` and the CI gate)
+- [x] 5.2 Add a short note in `AGENTS.md` that no lint step exists because no linter is configured (verify: the note is present and consistent with the actual `package.json`)
 
 ## 6. Commit
 
-- [ ] 6.1 Commit the script and artifact changes as `chore: add typecheck script and untrack build artifact` (verify: `git log --oneline -1` shows the commit and only the intended files are staged)
-- [ ] 6.2 Commit the workflow as `ci: add GitHub Actions workflow for frontend` (verify: `git log --oneline -1` shows the commit and `.github/workflows/ci.yml` is the only file in it)
-- [ ] 6.3 Commit the documentation update as `docs: document CI pipeline` (verify: `git log --oneline -3` shows the three logical commits and `git status` is clean)
-- [ ] 6.4 Do NOT push; report the branch name and the push command (`git push -u origin ci/setup`) for the user to run manually
+- [x] 6.1 Commit the script and artifact changes as `chore: add typecheck script and untrack build artifact` (verify: `git log --oneline -1` shows the commit and only the intended files are staged)
+- [x] 6.2 Commit the workflow as `ci: add GitHub Actions workflow for frontend` (verify: `git log --oneline -1` shows the commit and `.github/workflows/ci.yml` is the only file in it)
+- [x] 6.3 Commit the documentation update as `docs: document CI pipeline` (verify: `git log --oneline -3` shows the three logical commits and `git status` is clean)
+- [x] 6.4 Do NOT push; report the branch name and the push command (`git push -u origin ci/setup`) for the user to run manually
 
 ## 7. Final Report
 
-- [ ] 7.1 Write the final report in Indonesian with the sections: Temuan repo, Perubahan, Hasil verifikasi, Asumsi & hal yang dilewati, and Langkah manual untuk saya (branch protection requiring `ci-success`, Vercel production branch confirmation, and any env/secrets to add)
-- [ ] 7.2 Explicitly list the gaps: no linter configured so no lint step, `e2e/` not type-checked or tested in CI, no backend CI (separate repo), and the manual branch-protection step that cannot be automated from the repo
+- [x] 7.1 Write the final report in Indonesian with the sections: Temuan repo, Perubahan, Hasil verifikasi, Asumsi & hal yang dilewati, and Langkah manual untuk saya (branch protection requiring `ci-success`, Vercel production branch confirmation, and any env/secrets to add)
+- [x] 7.2 Explicitly list the gaps: no linter configured so no lint step, `e2e/` not type-checked or tested in CI, no backend CI (separate repo), and the manual branch-protection step that cannot be automated from the repo
