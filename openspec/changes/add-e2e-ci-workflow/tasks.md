@@ -33,5 +33,5 @@
 
 ## 5. Commit & hand-off
 
-- [ ] 5.1 Commit in small logical commits, e.g. `test: make e2e env-configurable for CI` (playwright config, `e2e/debug.spec.ts`, `.gitignore`) and `ci: add e2e workflow` (`.github/workflows/e2e.yml`); verify with `git log --oneline -5` and confirm nothing was pushed
-- [ ] 5.2 Write the final report in Indonesian with the sections: Temuan repo, Pemeriksaan email/Mailpit, Perubahan, Hasil verifikasi, Asumsi & hal yang dilewati, Kontrak backend, and Langkah manual untuk saya (push branch + PR, `BACKEND_REPO_TOKEN` only if the backend repo becomes private, and the note that the `e2e` check stays non-required until the owner makes it required)
+- [x] 5.1 Commit in small logical commits, e.g. `test: make e2e env-configurable for CI` (playwright config, `e2e/debug.spec.ts`, `.gitignore`) and `ci: add e2e workflow` (`.github/workflows/e2e.yml`); verify with `git log --oneline -5` and confirm nothing was pushed
+- [x] 5.2 Write the final report in Indonesian with the sections: Temuan repo, Pemeriksaan email/Mailpit, Perubahan, Hasil verifikasi, Asumsi & hal yang dilewati, Kontrak backend, and Langkah manual untuk saya (push branch + PR, `BACKEND_REPO_TOKEN` only if the backend repo becomes private, and the note that the `e2e` check stays non-required until the owner makes it required)
