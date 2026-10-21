@@ -17,25 +17,26 @@ import {
   registerAndLoginAsUser,
   clearAuthState,
   uniqueAdminResourceName,
+  openAdminMenu,
 } from "./helpers/auth";
 
 test.describe("Admin Panel", () => {
-  test("admin melihat tautan Admin di navbar, user biasa tidak", async ({
+  test("admin melihat tombol Admin di navbar, user biasa tidak", async ({
     page,
   }) => {
     await loginAsAdmin(page);
-    await expect(page.getByRole("link", { name: "Admin" })).toBeVisible();
+    await expect(page.getByRole("button", { name: "Admin" })).toBeVisible();
 
     await clearAuthState(page);
     await registerAndLoginAsUser(page);
-    await expect(page.getByRole("link", { name: "Admin" })).toHaveCount(0);
+    await expect(page.getByRole("button", { name: "Admin" })).toHaveCount(0);
   });
 
   test("admin bisa menambah resource baru dan resource muncul di daftar", async ({
     page,
   }) => {
     await loginAsAdmin(page);
-    await page.getByRole("link", { name: "Admin" }).click();
+    await openAdminMenu(page, "Kelola Ruangan");
     await expect(page.getByRole("heading", { name: "Kelola ruangan" })).toBeVisible();
 
     const resourceName = uniqueAdminResourceName();
@@ -65,7 +66,7 @@ test.describe("Admin Panel", () => {
     // inactive, test ini perlu diperbarui untuk mengassert badge "Nonaktif"
     // muncul di baris yang sama.
     await loginAsAdmin(page);
-    await page.getByRole("link", { name: "Admin" }).click();
+    await openAdminMenu(page, "Kelola Ruangan");
     await expect(page.getByRole("heading", { name: "Kelola ruangan" })).toBeVisible();
 
     const resourceName = uniqueAdminResourceName("Deactivate Test");
@@ -93,9 +94,7 @@ test.describe("Admin Panel", () => {
     page,
   }) => {
     await loginAsAdmin(page);
-    await page.getByRole("link", { name: "Admin" }).click();
-    await page.getByRole("link", { name: "Admin" }).click();
-    await page.goto("/admin/bookings");
+    await openAdminMenu(page, "Kelola Booking");
 
     await expect(
       page.getByRole("heading", { name: "Semua booking" })
