@@ -19,7 +19,22 @@ export async function loginAsAdmin(page: Page): Promise<void> {
   await page.getByPlaceholder("••••••••").fill(ADMIN_PASSWORD);
   await page.getByRole("button", { name: "Masuk" }).click();
   await expect(page.getByText("Ruangan tersedia")).toBeVisible();
-  await expect(page.getByRole("link", { name: "Admin" })).toBeVisible();
+  // Di navbar, menu admin adalah BUTTON dropdown (bukan link) yang memuat
+  // menuitem "Kelola Ruangan" dan "Kelola Booking".
+  await expect(page.getByRole("button", { name: "Admin" })).toBeVisible();
+}
+
+/**
+ * Buka dropdown "Admin" di navbar lalu klik salah satu menuitem-nya.
+ * Dropdown hanya dirender saat terbuka, jadi menuitem tidak ada di DOM
+ * sebelum tombol "Admin" diklik.
+ */
+export async function openAdminMenu(
+  page: Page,
+  item: "Kelola Ruangan" | "Kelola Booking"
+): Promise<void> {
+  await page.getByRole("button", { name: "Admin" }).click();
+  await page.getByRole("menuitem", { name: item }).click();
 }
 
 export async function registerAndLoginAsUser(
@@ -40,4 +55,6 @@ export async function clearAuthState(page: Page): Promise<void> {
   await page.context().clearCookies();
   await page.goto("/");
   await page.evaluate(() => localStorage.clear());
+  // Reload supaya state di memori AuthContext ikut ter-reset (token dihapus).
+  await page.reload();
 }

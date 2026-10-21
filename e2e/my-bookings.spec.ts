@@ -1,32 +1,18 @@
 import { test, expect } from "@playwright/test";
-import { registerAndLogin } from "./helpers";
+import { registerAndLogin, openBookingPage, pickSlot } from "./helpers";
 
 test("booking muncul di Booking Saya dan bisa dibatalkan", async ({ page }) => {
   await registerAndLogin(page);
+  await openBookingPage(page);
 
-  await page.locator("a.card").first().click();
-  await expect(
-    page.getByRole("button", { name: "Booking ruangan ini" })
-  ).toBeVisible();
-  await expect(page.locator(".rbc-calendar")).toBeVisible();
-
-  const nextButton = page.getByRole("button", { name: "Next" });
-  for (let i = 0; i < 45; i++) {
-    await nextButton.click();
-  }
-
-  const startHour = String((Date.now() + 1000) % 24).padStart(2, "0");
-  await page.locator("input.input-field").click();
-  await page
-    .locator(".react-datepicker__time-list-item")
-    .filter({ hasText: new RegExp(`^${startHour}:00$`) })
-    .first()
-    .click();
+  // 45 hari ke depan (beda dari test booking konflik) supaya slot resource
+  // yang sama tidak saling bentrok.
+  await pickSlot(page, { daysAhead: 45, time: "09:00" });
 
   await page.getByRole("button", { name: "Booking ruangan ini" }).click();
   await expect(page.getByText("Booking berhasil dibuat!")).toBeVisible();
 
-  await page.getByText("Booking Saya").click();
+  await page.getByRole("link", { name: "Booking Saya" }).click();
   await expect(page.getByRole("button", { name: "Batalkan" })).toBeVisible();
 
   await page.getByRole("button", { name: "Batalkan" }).click();
