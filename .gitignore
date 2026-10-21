@@ -35,3 +35,6 @@ plan.md
 
 # e2e test results
 test-results/
+
+# playwright html report
+playwright-report/

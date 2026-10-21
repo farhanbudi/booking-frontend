@@ -2,13 +2,17 @@ import { test, expect } from "@playwright/test";
 import { registerAndLogin } from "./helpers";
 import { writeFileSync } from "fs";
 
+const DEBUG_OUTPUT_DIR =
+  process.env.E2E_DEBUG_OUTPUT_DIR ??
+  "C:/Users/LENOVO/AppData/Local/Temp/opencode";
+
 test("debug booking page", async ({ page }) => {
   await registerAndLogin(page);
   await page.locator("a.card").first().click();
   await expect(page.getByRole("button", { name: "Booking ruangan ini" })).toBeVisible();
-  await page.screenshot({ path: "C:/Users/LENOVO/AppData/Local/Temp/opencode/booking-page.png", fullPage: true });
+  await page.screenshot({ path: `${DEBUG_OUTPUT_DIR}/booking-page.png`, fullPage: true });
   const html = await page.content();
-  writeFileSync("C:/Users/LENOVO/AppData/Local/Temp/opencode/booking-page.html", html);
+  writeFileSync(`${DEBUG_OUTPUT_DIR}/booking-page.html`, html);
   const timeInputs = await page.locator("input").all();
   console.log("Found", timeInputs.length, "input elements");
   for (const t of timeInputs) {
