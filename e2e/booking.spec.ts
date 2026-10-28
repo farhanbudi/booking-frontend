@@ -7,12 +7,14 @@ test("booking ruangan lalu booking slot yang sama memunculkan error konflik", as
   await registerAndLogin(page);
   await openBookingPage(page);
 
-  // Slot 30 hari ke depan jam 09:00: pasti di masa depan (tombol booking
+  // Slot 1 hari ke depan jam 09:00: pasti di masa depan (tombol booking
   // tidak disabled), jam operasional, dan tidak bentrok dengan test lain.
-  await pickSlot(page, { daysAhead: 30, time: "09:00" });
+  await pickSlot(page, { daysAhead: 1, time: "09:00" });
 
   await page.getByRole("button", { name: "Booking ruangan ini" }).click();
-  await expect(page.getByText("Booking berhasil dibuat!")).toBeVisible();
+  await expect(
+    page.getByText("Booking berhasil dibuat!")
+  ).toBeVisible();
 
   // Booking slot yang sama sekali lagi harus ditolak backend (409).
   await page.getByRole("button", { name: "Booking ruangan ini" }).click();
