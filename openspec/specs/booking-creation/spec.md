@@ -6,7 +6,7 @@ being able to start a booking by selecting a free time window on that calendar.
 The submit, validation, and error-handling flow described elsewhere in the
 application remains unchanged.
 
-## ADDED Requirements
+## Requirements
 
 ### Requirement: Booking page renders a visual day calendar of existing bookings
 The booking page SHALL display the existing bookings for the currently selected
@@ -28,18 +28,15 @@ SHALL NOT offer a week or month view.
 - **THEN** no week or month view is available to the user
 
 ### Requirement: Calendar date navigation is the single source of date changes
-The booking page SHALL expose calendar date navigation controls (such as
-"Back", "Next", and "Today"). Using any of these controls SHALL change the
-currently selected date and SHALL trigger a refresh of the bookings shown on
-the calendar for the new date. A separate manual date input for the same
-purpose SHALL NOT be present on the page.
+
+The booking page SHALL expose calendar date navigation controls using the application's Indonesian wording: "Sebelumnya" (previous), "Berikutnya" (next) and "Hari ini" (today). Using any of these controls SHALL change the currently selected date and SHALL trigger a refresh of the bookings shown on the calendar for the new date. Because the calendar is restricted to a single-day view, the "Berikutnya" control SHALL advance the selected date by exactly one day per activation. A separate manual date input for the same purpose SHALL NOT be present on the page.
 
 #### Scenario: Next day control advances the date and refreshes bookings
-- **WHEN** the user clicks the calendar's "Next" control while viewing a date that has bookings
+- **WHEN** the user clicks the calendar's "Berikutnya" control while viewing a date that has bookings
 - **THEN** the calendar moves to the following day and the event blocks shown reflect the bookings of that new day
 
 #### Scenario: Today control returns to today and refreshes bookings
-- **WHEN** the user clicks the calendar's "Today" control while viewing a different date
+- **WHEN** the user clicks the calendar's "Hari ini" control while viewing a different date
 - **THEN** the calendar moves to today's day and the event blocks shown reflect the bookings of today
 
 ### Requirement: Selecting a free time window populates the booking form

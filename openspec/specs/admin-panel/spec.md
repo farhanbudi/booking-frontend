@@ -20,17 +20,17 @@ The application SHALL expose two routes, `/admin/resources` and `/admin/bookings
 - **WHEN** a visitor with no authenticated user navigates to `/admin/resources` or `/admin/bookings`
 - **THEN** the visitor is redirected to `/login`
 
-### Requirement: Admin nav link is shown only to admins
+### Requirement: Admin nav menu is shown only to admins
 
-The navigation bar SHALL display an "Admin" link that links to the admin landing page (the admin resources page) only when the authenticated user has `role === "admin"`. The link SHALL NOT be rendered for any other state.
+The navigation bar SHALL display an "Admin" dropdown trigger — a control labelled "Admin" that acts as a menu button — only when the authenticated user has `role === "admin"`. Activating the trigger SHALL reveal a menu that exposes the "Kelola Ruangan" destination (the admin resources page) and the "Kelola Booking" destination (the admin bookings page). The trigger and its destinations SHALL NOT be rendered for any other state.
 
 #### Scenario: Admin sees the Admin link
 - **WHEN** the authenticated user has `role === "admin"`
-- **THEN** an "Admin" link is visible in the navbar
+- **THEN** an "Admin" menu trigger is visible in the navbar, and activating it reveals the "Kelola Ruangan" and "Kelola Booking" destinations
 
 #### Scenario: Regular user does not see the Admin link
 - **WHEN** the authenticated user has `role === "user"` or is unauthenticated
-- **THEN** no "Admin" link is rendered in the navbar
+- **THEN** no "Admin" menu trigger and no admin destination is rendered in the navbar
 
 ### Requirement: Admin can list resources with their active status
 
